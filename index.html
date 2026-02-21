@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CPD &amp; PLC Monitor — WSE 3.1.4</title>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito Sans',sans-serif;background:#f0f4ff;color:#1e2a45;min-height:100vh}
+input,select,textarea,button{font-family:inherit}
+.card{background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(30,42,69,.07);border:1px solid #e8edf7;padding:22px}
+.badge{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+label.field-label{display:block;font-size:11px;font-weight:700;color:#5a6a8a;margin-bottom:5px;letter-spacing:.5px;text-transform:uppercase}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;padding:10px 14px;border:1.5px solid #dde3f0;border-radius:10px;font-size:13px;color:#1e2a45;outline:none;background:#f8faff;transition:border .2s;display:block}
+input:focus,select:focus,textarea:focus{border-color:#6366f1}
+textarea{resize:vertical;min-height:75px;line-height:1.6}
+.field{margin-bottom:14px}
+.btn{padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:#6366f1;color:#fff}
+.btn-success{background:#10b981;color:#fff}
+.btn-danger{background:#ef4444;color:#fff}
+.btn-warn{background:#f59e0b;color:#fff}
+.btn-ghost{background:transparent;color:#6366f1;border:1.5px solid #6366f1}
+.btn-sm{padding:6px 14px;font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px}
+.stat-card{background:#fff;border-radius:14px;border:1px solid #e8edf7;padding:18px;text-align:center;box-shadow:0 2px 8px rgba(30,42,69,.06)}
+.section-title{font-family:'Nunito',sans-serif;font-weight:800;font-size:19px;color:#1e2a45;margin-bottom:4px}
+.section-sub{font-size:13px;color:#7a8aaa;margin-bottom:16px}
+.progress-bar{background:#e8edf7;border-radius:8px;height:8px;overflow:hidden;margin-top:5px}
+.progress-fill{height:100%;border-radius:8px;transition:width .4s}
+.tab-bar{display:flex;gap:4px;background:#e8edf7;border-radius:12px;padding:4px;overflow-x:auto}
+.tab-btn{padding:9px 16px;border-radius:9px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;white-space:nowrap;transition:all .2s;background:transparent;color:#7a8aaa}
+.tab-btn.active{background:#fff;color:#6366f1;box-shadow:0 2px 8px rgba(99,102,241,.15)}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,20,40,.5);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:18px;padding:28px;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(15,20,40,.25)}
+.alert{border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+.alert-success{background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46}
+.alert-warn{background:#fff7ed;border:1px solid #fde68a;color:#92400e}
+.alert-error{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
+.row-item{padding:12px 0;border-bottom:1px solid #f0f4ff;display:flex;align-items:flex-start;gap:12px}
+.row-item:last-child{border-bottom:none}
+.checklist-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f0f4ff;font-size:13px}
+.checklist-row:last-child{border-bottom:none}
+.empty-state{font-size:13px;color:#aab3c8;text-align:center;padding:32px}
+.teacher-card{background:#fff;border-radius:12px;border:1px solid #e8edf7;padding:16px;box-shadow:0 1px 4px rgba(30,42,69,.05)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:8px 10px;text-align:left;font-weight:700;color:#5a6a8a;font-size:11px;letter-spacing:.5px;text-transform:uppercase;background:#f8faff}
+td{padding:10px;border-bottom:1px solid #f0f4ff;vertical-align:middle}
+.nav-bar{background:#1e2a45;padding:0 24px;display:flex;align-items:center;justify-content:space-between;min-height:60px;flex-wrap:wrap;gap:10px}
+.nav-logo{display:flex;align-items:center;gap:12px}
+.nav-icon{background:#6366f1;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.nav-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:17px;color:#fff}
+.nav-sub{font-size:11px;color:rgba(255,255,255,.45);letter-spacing:.3px}
+.tag-bar{background:#fff;border-bottom:1px solid #e8edf7;padding:12px 24px}
+.content{max-width:1100px;margin:0 auto;padding:26px 20px 80px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.multi-check-wrap{display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;border:1.5px solid #dde3f0;border-radius:10px;padding:10px;background:#f8faff}
+.multi-check-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 6px;border-radius:6px;cursor:pointer}
+.multi-check-item:hover{background:#e8edf7}
+.multi-check-item input[type=checkbox]{width:auto;display:inline;margin:0}
+
+/* Login screen */
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1e2a45 0%,#2d3f6b 50%,#1e2a45 100%);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:24px}
+.login-card{background:rgba(255,255,255,.07);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:48px 40px;max-width:420px;width:90%;text-align:center}
+.login-icon{font-size:52px;margin-bottom:16px}
+.login-title{font-family:'Nunito',sans-serif;font-weight:900;font-size:28px;color:#fff;margin-bottom:8px}
+.login-sub{font-size:14px;color:rgba(255,255,255,.55);margin-bottom:32px;line-height:1.6}
+.btn-ms{background:#0078d4;color:#fff;border:none;border-radius:12px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px;margin:0 auto;transition:background .2s}
+.btn-ms:hover{background:#106ebe}
+.btn-ms svg{width:20px;height:20px}
+
+/* Sync indicator */
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;margin-right:6px}
+.sync-dot.syncing{background:#f59e0b;animation:pulse 1s infinite}
+.sync-dot.error{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Loading spinner */
+.spinner{width:36px;height:36px;border:3px solid #e8edf7;border-top-color:#6366f1;border-radius:50%;animation:spin .7s linear infinite;margin:32px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:500;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading-overlay p{font-size:14px;color:#5a6a8a;font-weight:600}
+
+@media(max-width:700px){.grid2{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media print{.nav-bar,.tag-bar,.no-print{display:none!important}.tab-panel{display:block!important}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN — hidden by default, shown by JS if not signed in -->
+<div class="login-screen" id="login-screen" style="display:none">
+  <div class="login-card">
+    <div class="login-icon">🎓</div>
+    <div class="login-title">CPD &amp; PLC Monitor</div>
+    <div class="login-sub">WSE Domain 3.1.4 — Standard dan Jangkaan<br>Sign in with your school Microsoft 365 account to continue</div>
+    <button class="btn-ms" id="btn-signin" onclick="this.innerHTML='<span style=\'margin-right:8px\'>⏳</span> Redirecting to Microsoft...';this.disabled=true;signIn();">
+      <svg viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+      Sign in with Microsoft
+    </button>
+    <p style="color:rgba(255,255,255,.35);font-size:12px;margin-top:16px">You will be redirected to the Microsoft login page</p>
+  </div>
+  <div style="color:rgba(255,255,255,.3);font-size:12px">Ministry of Education Brunei · Secure M365 Login</div>
+</div>
+
+<!-- LOADING OVERLAY — shown while checking auth on startup -->
+<div class="loading-overlay" id="loading-overlay" style="display:flex">
+  <div class="spinner"></div>
+  <p id="loading-msg">Checking sign-in status...</p>
+  <button onclick="clearTimeout(window._authTimeout);document.getElementById('loading-overlay').style.display='none';document.getElementById('login-screen').style.display='flex';" style="margin-top:8px;background:none;border:1px solid #dde3f0;border-radius:8px;padding:6px 16px;font-size:12px;color:#7a8aaa;cursor:pointer;display:none" id="skip-btn">Taking too long? Click here</button>
+</div>
+<script>
+  // Show the skip button after 5 seconds if still loading
+  setTimeout(function(){
+    var btn = document.getElementById('skip-btn');
+    var overlay = document.getElementById('loading-overlay');
+    if(btn && overlay && overlay.style.display !== 'none') btn.style.display = 'block';
+  }, 5000);
+</script>
+
+<!-- MAIN APP -->
+<div id="main-app" style="display:none">
+
+<div class="nav-bar">
+  <div class="nav-logo">
+    <div class="nav-icon">🎓</div>
+    <div>
+      <div class="nav-title">CPD &amp; PLC Monitor</div>
+      <div class="nav-sub">WSE Domain 3.1.4 — Standard dan Jangkaan</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span id="sync-status" style="font-size:12px;color:rgba(255,255,255,.55);display:flex;align-items:center"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Connected</span></span>
+    <span id="nav-stats-text" style="font-size:12px;color:rgba(255,255,255,.35)"></span>
+    <span id="user-badge" style="font-size:12px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.1);border-radius:20px;padding:4px 12px"></span>
+    <button id="btn-refresh" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700">🔄 Refresh</button>
+    <button id="btn-reset-year" style="background:rgba(255,165,0,.25);border:1px solid rgba(255,165,0,.5);color:#ffd580;border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700">📅 New Year</button>
+    <button id="btn-signout" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.6);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:700">Sign Out</button>
+  </div>
+</div>
+
+<div class="tag-bar no-print">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabBtn-dashboard">📊 Dashboard</button>
+    <button class="tab-btn" id="tabBtn-cpd">📚 CPD Log</button>
+    <button class="tab-btn" id="tabBtn-plc">🤝 PLC Sessions</button>
+    <button class="tab-btn" id="tabBtn-staff">👥 Staff</button>
+    <button class="tab-btn" id="tabBtn-report">📋 WSE Report</button>
+  </div>
+</div>
+
+<div class="content">
+  <div id="alert-zone"></div>
+  <div id="tab-dashboard" class="tab-panel active"></div>
+  <div id="tab-cpd" class="tab-panel"></div>
+  <div id="tab-plc" class="tab-panel"></div>
+  <div id="tab-staff" class="tab-panel"></div>
+  <div id="tab-report" class="tab-panel"></div>
+</div>
+
+</div><!-- /main-app -->
+
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h3 id="modal-title" style="font-family:Nunito;font-weight:800;font-size:18px;color:#1e2a45"></h3>
+      <button id="modal-close-btn" style="background:#f0f4ff;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:15px;color:#7a8aaa">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+var CLIENT_ID   = '309beb7a-2fed-4f25-b705-2ba53b9e2775';
+var TENANT_ID   = '055b48fa-571c-4710-8e87-b79ff84ea486';
+var SITE_URL    = 'https://edumoebn.sharepoint.com/sites/CPDPLCMonitor';
+var GRAPH_BASE  = 'https://graph.microsoft.com/v1.0';
+
+// SharePoint List names
+var LISTS = {
+  teachers:   'CPD_Teachers',
+  cpd:        'CPD_Events',
+  attendance: 'CPD_Attendance',
+  plc:        'CPD_PLC',
+  absences:   'CPD_Absences'
+};
+
+// ─── MSAL SETUP ───────────────────────────────────────────────────────────────
+// Use redirect flow (not popup) so it works when opened from SharePoint/OneDrive
+var _redirectUri = window.location.href.split('?')[0].split('#')[0];
+
+// Detect if we are inside an iframe (SharePoint preview) — redirect won't work in iframe
+if(window.self !== window.top){
+  // We're in an iframe — break out to full window
+  window.top.location.href = window.location.href;
+}
+
+var msalConfig = {
+  auth: {
+    clientId: CLIENT_ID,
+    authority: 'https://login.microsoftonline.com/' + TENANT_ID,
+    redirectUri: _redirectUri,
+    navigateToLoginRequestUrl: true,
+    postLogoutRedirectUri: _redirectUri
+  },
+  cache: {
+    cacheLocation: 'localStorage',
+    storeAuthStateInCookie: true,
+    secureCookies: false
+  },
+  system: {
+    allowNativeBroker: false,
+    windowHashTimeout: 60000,
+    iframeHashTimeout: 6000,
+    loadFrameTimeout: 0
+  }
+};
+var msalInstance = new msal.PublicClientApplication(msalConfig);
+var SCOPES = ['Sites.ReadWrite.All', 'User.Read', 'offline_access'];
+var currentUser = null;
+var siteId = null;
+var listIds = {};
+
+// ─── DATA CACHE ───────────────────────────────────────────────────────────────
+var DB = { teachers:[], cpd:[], attendance:[], plc:[], absences:[] };
+var currentTab = 'dashboard';
+var _lastNarrative = '';
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+var ROLES = ['Guru Besar','Penolong Guru Besar','Guru Kanan','Penolong Guru Kanan','Guru Kelas','Guru Subjek','Guru Pendidikan Khas','Pembantu Guru','Others'];
+var SUBJECTS = ['Mathematics','English','Bahasa Melayu','Science','Social Studies','MIB','Pendidikan Jasmani','Pendidikan Ugama Islam','ICT','Lukisan dan Kerja Tangan','PRA Sekolah','STEAM','Other'];
+var PLC_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+var SDP_GOALS = ['Improve student literacy','Improve student numeracy','Enhance digital teaching tools','Strengthen assessment for learning','Develop high-expectation classroom culture','Improve student wellbeing & inclusion','Strengthen CPD & professional learning culture','Prepare for WSE / SDP goal','Other'];
+var PDCA_PHASES = ['Plan','Do','Check','Act'];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function badge(text,color){return '<span class="badge" style="background:'+color+'22;color:'+color+';border:1px solid '+color+'44">'+esc(text)+'</span>';}
+function fmtDate(d){if(!d)return'—';try{return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(e){return d;}}
+function pct(a,b){return b===0?0:Math.round(a/b*100);}
+function todayStr(){return new Date().toISOString().slice(0,10);}
+function teacherById(id){return DB.teachers.find(function(t){return t.id===id;});}
+function cpdById(id){return DB.cpd.find(function(e){return e.id===id;});}
+function plcById(id){return DB.plc.find(function(s){return s.id===id;});}
+function attendeesByCPD(cpdId){return DB.attendance.filter(function(a){return a.cpdId===cpdId;});}
+function teacherAttendance(tid){return DB.attendance.filter(function(a){return a.teacherId===tid;});}
+function teachersNotAttended(){var ids={};DB.attendance.forEach(function(a){ids[a.teacherId]=true;});return DB.teachers.filter(function(t){return!ids[t.id];});}
+function roleColor(r){var m={'Guru Besar':'#6366f1','Penolong Guru Besar':'#8b5cf6','Guru Kanan':'#10b981','Penolong Guru Kanan':'#3b82f6','Guru Kelas':'#f59e0b','Guru Subjek':'#ec4899','Guru Pendidikan Khas':'#14b8a6','Pembantu Guru':'#84cc16','Others':'#9ca3af'};return m[r]||'#6366f1';}
+function displayRoles(t){var roles=t.roles||[t.role||'Guru Subjek'];return roles.map(function(r){return badge(r==='Others'&&t.roleOther?t.roleOther:r,roleColor(r));}).join(' ');}
+function displaySubjects(t){var subs=t.subjects||[];return subs.map(function(s){return badge(s==='Other'&&t.subjectOther?t.subjectOther:s,'#6366f1');}).join(' ');}
+
+function showAlert(msg,type){
+  var zone=document.getElementById('alert-zone');
+  var el=document.createElement('div');
+  el.className='alert alert-'+(type||'success');
+  el.textContent=msg;
+  zone.appendChild(el);
+  setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},5000);
+}
+
+function setSyncStatus(state){
+  var dot=document.getElementById('sync-dot');
+  var txt=document.getElementById('sync-text');
+  if(!dot||!txt)return;
+  dot.className='sync-dot'+(state==='syncing'?' syncing':state==='error'?' error':'');
+  txt.textContent=state==='syncing'?'Saving...':state==='error'?'Offline — changes not saved':'Connected';
+}
+
+function showLoading(msg){
+  var ol=document.getElementById('loading-overlay');
+  if(ol){ol.style.display='flex';document.getElementById('loading-msg').textContent=msg||'Loading...';}
+}
+function hideLoading(){
+  var ol=document.getElementById('loading-overlay');
+  if(ol)ol.style.display='none';
+}
+
+function openModal(title,html){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modal-body').innerHTML='';
+}
+
+function switchTab(tab){
+  currentTab=tab;
+  ['dashboard','cpd','plc','staff','report'].forEach(function(t){
+    var panel=document.getElementById('tab-'+t);
+    var btn=document.getElementById('tabBtn-'+t);
+    if(panel)panel.classList.toggle('active',t===tab);
+    if(btn)btn.classList.toggle('active',t===tab);
+  });
+  render(tab);
+}
+
+function render(tab){
+  if(tab==='dashboard')renderDashboard();
+  else if(tab==='cpd')renderCPD();
+  else if(tab==='plc')renderPLC();
+  else if(tab==='staff')renderStaff();
+  else if(tab==='report')renderReport();
+  updateNavStats();
+}
+
+function updateNavStats(){
+  var el=document.getElementById('nav-stats-text');
+  if(el)el.textContent=DB.teachers.length+' staff · '+DB.cpd.length+' CPD · '+DB.plc.length+' PLC';
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+async function getToken(){
+  var accounts=msalInstance.getAllAccounts();
+  if(accounts.length===0)throw new Error('Not signed in');
+  try {
+    var resp=await msalInstance.acquireTokenSilent({scopes:SCOPES,account:accounts[0]});
+    return resp.accessToken;
+  } catch(e) {
+    // Silent failed — do redirect to get new token
+    await msalInstance.acquireTokenRedirect({scopes:SCOPES,account:accounts[0]});
+    return null; // page will redirect
+  }
+}
+
+async function signIn(){
+  try {
+    // Use redirect instead of popup — works in SharePoint document viewer
+    await msalInstance.loginRedirect({
+      scopes: SCOPES,
+      prompt: 'select_account'
+    });
+    // Page will redirect to Microsoft login — initApp() runs on return via handleRedirectPromise
+  } catch(e){
+    showAlert('Sign in failed: '+e.message,'error');
+    console.error('Sign in error',e);
+  }
+}
+
+async function signOut(){
+  try {
+    var accounts=msalInstance.getAllAccounts();
+    await msalInstance.logoutRedirect({account:accounts.length>0?accounts[0]:null});
+  } catch(e){ location.reload(); }
+}
+
+// ─── GRAPH API ────────────────────────────────────────────────────────────────
+async function graphGet(url){
+  var token=await getToken();
+  var r=await fetch(GRAPH_BASE+url,{headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}});
+  if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Request failed: '+r.status);}
+  return r.json();
+}
+
+async function graphPost(url,body){
+  var token=await getToken();
+  var r=await fetch(GRAPH_BASE+url,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Request failed: '+r.status);}
+  return r.json();
+}
+
+async function graphPatch(url,body){
+  var token=await getToken();
+  var r=await fetch(GRAPH_BASE+url,{method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Request failed: '+r.status);}
+  return r.status===204?null:r.json();
+}
+
+async function graphDelete(url){
+  var token=await getToken();
+  var r=await fetch(GRAPH_BASE+url,{method:'DELETE',headers:{Authorization:'Bearer '+token}});
+  if(!r.ok&&r.status!==404){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Delete failed: '+r.status);}
+}
+
+// ─── SHAREPOINT SITE & LIST RESOLUTION ───────────────────────────────────────
+async function resolveSite(){
+  var hostname=new URL(SITE_URL).hostname;
+  var sitepath=new URL(SITE_URL).pathname;
+  var data=await graphGet('/sites/'+hostname+':'+sitepath);
+  siteId=data.id;
+}
+
+async function resolveListIds(){
+  var data=await graphGet('/sites/'+siteId+'/lists?$select=id,name');
+  (data.value||[]).forEach(function(l){
+    Object.keys(LISTS).forEach(function(k){
+      if(l.name===LISTS[k])listIds[k]=l.id;
+    });
+  });
+  var missing=Object.keys(LISTS).filter(function(k){return!listIds[k];});
+  if(missing.length>0){
+    showAlert('⚠️ Missing SharePoint lists: '+missing.join(', ')+'. Please create them in SharePoint.','warn');
+  }
+}
+
+// ─── LIST COLUMN SETUP (auto-create columns if missing) ──────────────────────
+var LIST_COLUMNS = {
+  teachers:[
+    {name:'AppId',type:'text'},
+    {name:'TeacherName',type:'text'},
+    {name:'Roles',type:'note'},
+    {name:'PrimaryRole',type:'text'},
+    {name:'RoleOther',type:'text'},
+    {name:'Subjects',type:'note'},
+    {name:'SubjectOther',type:'text'},
+    {name:'PlcDay',type:'text'}
+  ],
+  cpd:[
+    {name:'AppId',type:'text'},
+    {name:'CpdTitle',type:'text'},
+    {name:'CpdDate',type:'text'},
+    {name:'Facilitator',type:'text'},
+    {name:'SdpGoal',type:'text'},
+    {name:'Description',type:'note'},
+    {name:'DurationHours',type:'text'}
+  ],
+  attendance:[
+    {name:'AppId',type:'text'},
+    {name:'CpdId',type:'text'},
+    {name:'TeacherId',type:'text'},
+    {name:'EventTitle',type:'text'},
+    {name:'EventDate',type:'text'},
+    {name:'Reflection',type:'note'},
+    {name:'HowApplied',type:'note'},
+    {name:'Impact',type:'note'},
+    {name:'Photo',type:'note'}
+  ],
+  plc:[
+    {name:'AppId',type:'text'},
+    {name:'Subject',type:'text'},
+    {name:'SubjectOther',type:'text'},
+    {name:'PlcDay',type:'text'},
+    {name:'PlcDate',type:'text'},
+    {name:'ConductedBy',type:'text'},
+    {name:'Topic',type:'text'},
+    {name:'Discussion',type:'note'},
+    {name:'ActionPoints',type:'note'},
+    {name:'PdcaPhase',type:'text'},
+    {name:'PdcaNotes',type:'text'},
+    {name:'Attendees',type:'note'},
+    {name:'Photo',type:'note'}
+  ],
+  absences:[
+    {name:'AppId',type:'text'},
+    {name:'SessionType',type:'text'},
+    {name:'SessionId',type:'text'},
+    {name:'TeacherId',type:'text'},
+    {name:'Reason',type:'note'},
+    {name:'Swapped',type:'text'},
+    {name:'SwapWith',type:'text'},
+    {name:'AbsenceDate',type:'text'}
+  ]
+};
+
+async function ensureColumns(listKey){
+  if(!listIds[listKey])return;
+  try {
+    var existing=await graphGet('/sites/'+siteId+'/lists/'+listIds[listKey]+'/columns?$select=name');
+    var existingNames=(existing.value||[]).map(function(c){return c.name;});
+    for(var i=0;i<LIST_COLUMNS[listKey].length;i++){
+      var col=LIST_COLUMNS[listKey][i];
+      if(existingNames.indexOf(col.name)===-1){
+        var body={name:col.name};
+        if(col.type==='note'){body.text={allowMultipleLines:true};}
+        else{body.text={allowMultipleLines:false};}
+        await graphPost('/sites/'+siteId+'/lists/'+listIds[listKey]+'/columns',body).catch(function(){});
+      }
+    }
+  } catch(e){console.warn('Column check failed for '+listKey,e);}
+}
+
+// ─── DATA LOADING ─────────────────────────────────────────────────────────────
+async function loadAllData(){
+  showLoading('Loading data from SharePoint...');
+  try {
+    await Promise.all([
+      loadList('teachers'),
+      loadList('cpd'),
+      loadList('attendance'),
+      loadList('plc'),
+      loadList('absences')
+    ]);
+    hideLoading();
+    render(currentTab);
+  } catch(e){
+    hideLoading();
+    showAlert('Error loading data: '+e.message,'error');
+    setSyncStatus('error');
+  }
+}
+
+async function loadList(key){
+  if(!listIds[key])return;
+  try {
+    var items=[];
+    var url='/sites/'+siteId+'/lists/'+listIds[key]+'/items?$expand=fields&$top=999';
+    while(url){
+      var data=await graphGet(url);
+      items=items.concat(data.value||[]);
+      url=data['@odata.nextLink']?data['@odata.nextLink'].replace(GRAPH_BASE,''):null;
+    }
+    DB[key]=items.map(function(item){return spItemToLocal(key,item);});
+  } catch(e){
+    console.warn('Failed to load '+key,e);
+    DB[key]=[];
+  }
+}
+
+function spItemToLocal(key,item){
+  var f=item.fields||{};
+  var base={id:f.AppId||String(item.id),_spId:item.id};
+  if(key==='teachers') return Object.assign(base,{name:f.TeacherName||'',roles:safeParseArray(f.Roles),role:f.PrimaryRole||'',roleOther:f.RoleOther||'',subjects:safeParseArray(f.Subjects),subject:'',subjectOther:f.SubjectOther||'',plcDay:f.PlcDay||''});
+  if(key==='cpd') return Object.assign(base,{title:f.CpdTitle||'',date:f.CpdDate||'',facilitator:f.Facilitator||'',sdpGoal:f.SdpGoal||'',description:f.Description||'',durationHours:f.DurationHours||''});
+  if(key==='attendance') return Object.assign(base,{cpdId:f.CpdId||'',teacherId:f.TeacherId||'',eventTitle:f.EventTitle||'',eventDate:f.EventDate||'',reflection:f.Reflection||'',howApplied:f.HowApplied||'',impact:f.Impact||'',photo:f.Photo||null});
+  if(key==='plc') return Object.assign(base,{subject:f.Subject||'',subjectOther:f.SubjectOther||'',day:f.PlcDay||'',date:f.PlcDate||'',conductedBy:f.ConductedBy||'',topic:f.Topic||'',discussion:f.Discussion||'',actionPoints:f.ActionPoints||'',pdcaPhase:f.PdcaPhase||'',pdcaNotes:f.PdcaNotes||'',attendees:safeParseArray(f.Attendees),photo:f.Photo||null});
+  if(key==='absences') return Object.assign(base,{sessionType:f.SessionType||'',sessionId:f.SessionId||'',teacherId:f.TeacherId||'',reason:f.Reason||'',swapped:f.Swapped==='true',swapWith:f.SwapWith||'',date:f.AbsenceDate||''});
+  return base;
+}
+
+function localToSpFields(key,data){
+  if(key==='teachers') return {AppId:data.id,TeacherName:data.name,Roles:JSON.stringify(data.roles||[]),PrimaryRole:data.role||'',RoleOther:data.roleOther||'',Subjects:JSON.stringify(data.subjects||[]),SubjectOther:data.subjectOther||'',PlcDay:data.plcDay||''};
+  if(key==='cpd') return {AppId:data.id,CpdTitle:data.title,CpdDate:data.date,Facilitator:data.facilitator||'',SdpGoal:data.sdpGoal||'',Description:data.description||'',DurationHours:String(data.durationHours||'')};
+  if(key==='attendance') return {AppId:data.id,CpdId:data.cpdId,TeacherId:data.teacherId,EventTitle:data.eventTitle||'',EventDate:data.eventDate||'',Reflection:data.reflection||'',HowApplied:data.howApplied||'',Impact:data.impact||'',Photo:data.photo||''};
+  if(key==='plc') return {AppId:data.id,Subject:data.subject,SubjectOther:data.subjectOther||'',PlcDay:data.day||'',PlcDate:data.date,ConductedBy:data.conductedBy||'',Topic:data.topic,Discussion:data.discussion||'',ActionPoints:data.actionPoints||'',PdcaPhase:data.pdcaPhase||'',PdcaNotes:data.pdcaNotes||'',Attendees:JSON.stringify(data.attendees||[]),Photo:data.photo||''};
+  if(key==='absences') return {AppId:data.id,SessionType:data.sessionType,SessionId:data.sessionId,TeacherId:data.teacherId,Reason:data.reason,Swapped:String(data.swapped||false),SwapWith:data.swapWith||'',AbsenceDate:data.date||''};
+  return {};
+}
+
+function safeParseArray(s){
+  if(!s)return[];
+  try{var v=JSON.parse(s);return Array.isArray(v)?v:[];}catch(e){return[];}
+}
+
+function uid(){return Math.random().toString(36).slice(2,10)+Math.random().toString(36).slice(2,6);}
+
+// ─── CRUD HELPERS ─────────────────────────────────────────────────────────────
+async function spCreate(key,data){
+  if(!listIds[key])throw new Error('List not found: '+key);
+  setSyncStatus('syncing');
+  try {
+    var fields=localToSpFields(key,data);
+    var result=await graphPost('/sites/'+siteId+'/lists/'+listIds[key]+'/items',{fields:fields});
+    data._spId=result.id;
+    setSyncStatus('ok');
+    return data;
+  } catch(e){setSyncStatus('error');throw e;}
+}
+
+async function spUpdate(key,data){
+  if(!listIds[key]||!data._spId)throw new Error('Cannot update: missing list or SP ID');
+  setSyncStatus('syncing');
+  try {
+    var fields=localToSpFields(key,data);
+    await graphPatch('/sites/'+siteId+'/lists/'+listIds[key]+'/items/'+data._spId+'/fields',fields);
+    setSyncStatus('ok');
+  } catch(e){setSyncStatus('error');throw e;}
+}
+
+async function spDelete(key,spId){
+  if(!listIds[key]||!spId)return;
+  setSyncStatus('syncing');
+  try {
+    await graphDelete('/sites/'+siteId+'/lists/'+listIds[key]+'/items/'+spId);
+    setSyncStatus('ok');
+  } catch(e){setSyncStatus('error');throw e;}
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function initApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  showLoading('Connecting to SharePoint...');
+
+  // Set user badge
+  var accounts=msalInstance.getAllAccounts();
+  if(accounts.length>0){
+    currentUser=accounts[0];
+    var ub=document.getElementById('user-badge');
+    if(ub)ub.textContent='👤 '+(currentUser.name||currentUser.username);
+  }
+
+  try {
+    await resolveSite();
+    await resolveListIds();
+    // Ensure all columns exist
+    showLoading('Checking SharePoint columns...');
+    for(var k in LISTS){await ensureColumns(k);}
+    await loadAllData();
+  } catch(e){
+    hideLoading();
+    showAlert('Setup error: '+e.message+' — Check your SharePoint site URL and permissions.','error');
+    setSyncStatus('error');
+  }
+}
+
+// ─── STARTUP — handle redirect return from Microsoft login ────────────────────
+function showLoginScreen(errorMsg){
+  hideLoading();
+  var loginScreen = document.getElementById('login-screen');
+  if(loginScreen) loginScreen.style.display = 'flex';
+  if(errorMsg){
+    var errDiv = document.getElementById('auth-error-msg');
+    if(!errDiv){
+      errDiv = document.createElement('div');
+      errDiv.id = 'auth-error-msg';
+      errDiv.style.cssText = 'color:#fca5a5;font-size:12px;margin-top:14px;text-align:center;max-width:320px;line-height:1.5;padding:10px;background:rgba(255,0,0,.1);border-radius:8px;border:1px solid rgba(255,100,100,.3)';
+      var card = document.querySelector('.login-card');
+      if(card) card.appendChild(errDiv);
+    }
+    errDiv.textContent = errorMsg;
+  }
+}
+
+// Safety timeout — if MSAL hangs for more than 8 seconds, show login screen anyway
+var _authTimeout = setTimeout(function(){
+  var loginScreen = document.getElementById('login-screen');
+  var loadingOverlay = document.getElementById('loading-overlay');
+  // Only kick in if we're still showing the spinner
+  if(loadingOverlay && loadingOverlay.style.display !== 'none'){
+    console.warn('Auth timeout — showing login screen');
+    showLoginScreen('Sign-in check timed out. Please click below to sign in.');
+  }
+}, 8000);
+
+window.addEventListener('load', async function(){
+  try {
+    document.getElementById('loading-msg').textContent = 'Checking sign-in status...';
+
+    // Step 1: Handle redirect return from Microsoft (MUST be first call)
+    var redirectResult = null;
+    try {
+      redirectResult = await msalInstance.handleRedirectPromise();
+    } catch(redirectErr){
+      console.error('handleRedirectPromise failed:', redirectErr);
+      clearTimeout(_authTimeout);
+      showLoginScreen('Login error: ' + redirectErr.message);
+      return;
+    }
+
+    clearTimeout(_authTimeout);
+
+    // Step 2: Coming back from Microsoft login redirect
+    if(redirectResult && redirectResult.account){
+      currentUser = redirectResult.account;
+      document.getElementById('loading-msg').textContent = 'Signed in! Loading data...';
+      await initApp();
+      return;
+    }
+
+    // Step 3: Already signed in from a previous session
+    var accounts = msalInstance.getAllAccounts();
+    if(accounts.length > 0){
+      currentUser = accounts[0];
+      document.getElementById('loading-msg').textContent = 'Welcome back! Loading data...';
+      await initApp();
+      return;
+    }
+
+    // Step 4: Not signed in at all — show login
+    showLoginScreen();
+
+  } catch(e){
+    clearTimeout(_authTimeout);
+    console.error('Startup error:', e);
+    showLoginScreen('Startup error: ' + e.message);
+  }
+});
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  var attendedMap={};
+  DB.attendance.forEach(function(a){attendedMap[a.teacherId]=true;});
+  var attended=DB.teachers.filter(function(t){return attendedMap[t.id];}).length;
+  var notYet=DB.teachers.filter(function(t){return!attendedMap[t.id];});
+  var roleGroups={};
+  DB.teachers.forEach(function(t){
+    var roles=t.roles&&t.roles.length>0?t.roles:[t.role||'Guru Subjek'];
+    roles.forEach(function(r){
+      if(!roleGroups[r])roleGroups[r]={total:0,attended:0,color:roleColor(r)};
+      roleGroups[r].total++;
+      if(attendedMap[t.id])roleGroups[r].attended++;
+    });
+  });
+  var checks=[
+    {label:'CPD events documented',done:DB.cpd.length>0},
+    {label:'All staff levels have attended CPD',done:Object.keys(roleGroups).every(function(r){return roleGroups[r].attended>0||roleGroups[r].total===0;})},
+    {label:'Every teacher attended 1+ CPD',done:notYet.length===0&&DB.teachers.length>0},
+    {label:'CPD aligned to SDP goals',done:DB.cpd.some(function(e){return e.sdpGoal;})},
+    {label:'Teacher reflections documented',done:DB.attendance.some(function(a){return a.reflection;})},
+    {label:'CPD application documented',done:DB.attendance.some(function(a){return a.howApplied;})},
+    {label:'Impact on students documented',done:DB.attendance.some(function(a){return a.impact;})},
+    {label:'Photo evidence collected',done:DB.attendance.some(function(a){return a.photo;})||DB.plc.some(function(p){return p.photo;})},
+    {label:'PLC sessions recorded',done:DB.plc.length>0},
+    {label:'PDCA cycle documented in PLC',done:DB.plc.some(function(s){return s.pdcaPhase;})},
+    {label:'Absent records documented',done:DB.absences&&DB.absences.length>0}
+  ];
+  var score=checks.filter(function(c){return c.done;}).length;
+  var total=checks.length;
+  var scoreColor=score>=total*0.8?'#10b981':score>=total*0.5?'#3b82f6':'#f59e0b';
+  var byRoleHtml=Object.keys(roleGroups).map(function(r){var g=roleGroups[r];return'<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600">'+esc(r)+'</span><span style="font-size:11px;color:#7a8aaa">'+g.attended+'/'+g.total+'</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+pct(g.attended,g.total)+'%;background:'+g.color+'"></div></div></div>';}).join('')||(DB.teachers.length===0?'<p style="font-size:13px;color:#aab3c8">No staff added yet.</p>':'');
+  var sortedCPD=DB.cpd.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,3);
+  var recentCPD=sortedCPD.length===0?'<p class="empty-state">No CPD events yet.</p>':sortedCPD.map(function(e){return'<div class="row-item"><div style="background:#f0f4ff;border-radius:10px;padding:8px;font-size:18px;flex-shrink:0">📋</div><div><div style="font-weight:700;font-size:13px">'+esc(e.title)+'</div><div style="font-size:12px;color:#7a8aaa">'+fmtDate(e.date)+' · '+esc(e.facilitator||'Internal')+'</div>'+(e.sdpGoal?badge(e.sdpGoal,'#6366f1'):'')+'</div></div>';}).join('');
+  var sortedPLC=DB.plc.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,3);
+  var recentPLC=sortedPLC.length===0?'<p class="empty-state">No PLC sessions yet.</p>':sortedPLC.map(function(s){return'<div class="row-item"><div style="background:#f0f4ff;border-radius:10px;padding:8px;font-size:18px;flex-shrink:0">🤝</div><div><div style="font-weight:700;font-size:13px">'+esc(s.subject==='Other'&&s.subjectOther?s.subjectOther:s.subject)+'</div><div style="font-size:12px;color:#7a8aaa">'+fmtDate(s.date)+' · '+esc(s.day)+'</div><div style="font-size:12px;color:#5a6a8a;margin-top:2px">'+esc(s.topic)+(s.pdcaPhase?' · PDCA: '+esc(s.pdcaPhase):'')+'</div></div></div>';}).join('');
+  var notYetHtml=notYet.length>0?'<div class="alert alert-warn" style="margin-bottom:20px"><strong>⚠️ '+notYet.length+' teacher(s) have not attended any CPD yet:</strong><br>'+notYet.map(function(t){return badge(t.name,'#ef4444');}).join(' ')+'</div>':'';
+  var checklistHtml=checks.map(function(c){return'<div class="checklist-row"><span style="font-size:16px;flex-shrink:0">'+(c.done?'✅':'⬜')+'</span><span style="color:'+(c.done?'#1e2a45':'#aab3c8')+'">'+esc(c.label)+'</span></div>';}).join('');
+  document.getElementById('tab-dashboard').innerHTML=
+    '<div style="margin-bottom:22px"><h1 style="font-family:Nunito;font-weight:900;font-size:26px;color:#1e2a45">📊 CPD &amp; PLC Dashboard</h1><p style="font-size:14px;color:#7a8aaa;margin-top:4px">WSE Domain 3.1.4 — Live data from SharePoint · '+new Date().getFullYear()+'</p></div>'+
+    notYetHtml+
+    '<div class="stats-grid">'+
+    '<div class="stat-card"><div style="font-size:26px">📚</div><div style="font-family:Nunito;font-weight:900;font-size:30px;color:#6366f1">'+DB.cpd.length+'</div><div style="font-size:12px;font-weight:700;margin-top:3px">CPD Events</div></div>'+
+    '<div class="stat-card"><div style="font-size:26px">👨‍🏫</div><div style="font-family:Nunito;font-weight:900;font-size:30px;color:#10b981">'+attended+'/'+DB.teachers.length+'</div><div style="font-size:12px;font-weight:700;margin-top:3px">Attended CPD</div><div style="font-size:11px;color:#9aa3b8">'+pct(attended,DB.teachers.length)+'% coverage</div></div>'+
+    '<div class="stat-card"><div style="font-size:26px">🤝</div><div style="font-family:Nunito;font-weight:900;font-size:30px;color:#3b82f6">'+DB.plc.length+'</div><div style="font-size:12px;font-weight:700;margin-top:3px">PLC Sessions</div></div>'+
+    '<div class="stat-card"><div style="font-size:26px">⚠️</div><div style="font-family:Nunito;font-weight:900;font-size:30px;color:#ef4444">'+notYet.length+'</div><div style="font-size:12px;font-weight:700;margin-top:3px">Not Yet Attended</div></div>'+
+    '<div class="stat-card"><div style="font-size:26px">📋</div><div style="font-family:Nunito;font-weight:900;font-size:30px;color:#8b5cf6">'+score+'/'+total+'</div><div style="font-size:12px;font-weight:700;margin-top:3px">WSE Criteria Met</div></div>'+
+    '</div>'+
+    '<div class="grid2" style="margin-bottom:20px">'+
+    '<div class="card"><div class="section-title">Coverage by Staff Level</div><div class="section-sub">CPD attendance across all staff groups</div>'+byRoleHtml+'</div>'+
+    '<div class="card"><div class="section-title">WSE 3.1.4 Readiness</div><div class="section-sub">'+score+' of '+total+' criteria evidenced</div><div class="progress-bar" style="margin-bottom:12px"><div class="progress-fill" style="width:'+(score/total*100)+'%;background:'+scoreColor+'"></div></div>'+checklistHtml+'</div>'+
+    '</div>'+
+    '<div class="grid2"><div class="card"><div class="section-title">Recent CPD Events</div>'+recentCPD+'</div><div class="card"><div class="section-title">Recent PLC Sessions</div>'+recentPLC+'</div></div>';
+}
+
+// ─── CPD LOG ─────────────────────────────────────────────────────────────────
+function renderCPD(){
+  var notYet=teachersNotAttended();
+  var notYetHtml=notYet.length>0?'<div class="alert alert-warn"><strong>⚠️ '+notYet.length+' teacher(s) not yet attended any CPD:</strong> '+notYet.map(function(t){return badge(t.name,'#ef4444');}).join(' ')+'</div>':'<div class="alert alert-success">✅ All teachers have attended at least one CPD programme.</div>';
+  var eventsHtml='';
+  if(DB.cpd.length===0){
+    eventsHtml='<div class="card"><p class="empty-state">No CPD events added yet.</p></div>';
+  } else {
+    eventsHtml=DB.cpd.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(e){
+      var att=attendeesByCPD(e.id);
+      var attNames=att.slice(0,3).map(function(a){var t=teacherById(a.teacherId);return badge(t?t.name.split(' ')[0]:'?','#10b981');}).join(' ');
+      var more=att.length>3?badge('+'+(att.length-3)+' more','#7a8aaa'):'';
+      var absForThis=(DB.absences||[]).filter(function(a){return a.sessionId===e.id&&a.sessionType==='cpd';});
+      var absHtml=absForThis.length>0?'<div style="margin-top:6px;padding:6px 10px;background:#fff7ed;border-radius:8px;font-size:12px;color:#92400e">⚠️ '+absForThis.length+' absent — <em>'+absForThis.map(function(ab){var t=teacherById(ab.teacherId);return t?t.name:'?';}).join(', ')+'</em></div>':'';
+      return'<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px"><div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:5px"><span style="font-family:Nunito;font-weight:800;font-size:15px">'+esc(e.title)+'</span>'+(e.sdpGoal?badge(e.sdpGoal,'#6366f1'):'')+'</div><div style="font-size:12px;color:#7a8aaa;margin-bottom:6px">📅 '+fmtDate(e.date)+' &nbsp;·&nbsp; 👤 '+esc(e.facilitator||'Internal')+'</div>'+(e.description?'<p style="font-size:13px;color:#5a6a8a;margin-bottom:8px">'+esc(e.description)+'</p>':'')+'<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center"><span style="font-size:13px;font-weight:700;color:#10b981">✅ '+att.length+' attended</span> '+attNames+' '+more+'</div>'+absHtml+'</div><div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap"><button class="btn btn-success btn-sm" data-action="log-att" data-id="'+e.id+'">📝 Log Attendance</button><button class="btn btn-warn btn-sm" data-action="log-cpd-absent" data-id="'+e.id+'">❌ Log Absent</button><button class="btn btn-ghost btn-sm" data-action="edit-cpd" data-id="'+e.id+'">✏️ Edit</button><button class="btn btn-danger btn-sm" data-action="del-cpd" data-id="'+e.id+'">🗑</button></div></div></div>';
+    }).join('');
+  }
+  var tOpts=DB.teachers.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>';}).join('');
+  var absHtmlAll='';
+  var cpdAbs=(DB.absences||[]).filter(function(a){return a.sessionType==='cpd';});
+  if(cpdAbs.length>0){
+    absHtmlAll='<div class="card" style="margin-bottom:18px;border-color:#fde68a;background:#fffbeb"><div style="font-weight:700;font-size:14px;margin-bottom:10px">📋 CPD Absence Records</div>'+cpdAbs.map(function(ab){var t=teacherById(ab.teacherId);var e=cpdById(ab.sessionId);return'<div style="padding:10px 0;border-bottom:1px solid #fde68a"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><strong style="font-size:13px">'+esc(t?t.name:'Unknown')+'</strong><span style="font-size:12px;color:#7a8aaa">'+esc(e?e.title:'Deleted event')+'</span></div><div style="font-size:12px;color:#92400e;margin-top:3px">Reason: '+esc(ab.reason)+'</div>'+(ab.swapped?'<div style="font-size:12px;color:#6366f1">🔄 Swapped with: '+esc(ab.swapWith||'—')+'</div>':'')+'<button class="btn btn-danger btn-sm" style="margin-top:5px;padding:3px 10px" data-action="del-absence" data-id="'+ab.id+'" data-spid="'+(ab._spId||'')+'">🗑 Remove</button></div>';}).join('')+'</div>';
+  }
+  document.getElementById('tab-cpd').innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px"><div><div class="section-title">CPD Events &amp; Attendance</div><div class="section-sub">Data saves live to SharePoint — all teachers see updates instantly</div></div><button class="btn btn-primary" data-action="add-cpd">+ Add CPD Event</button></div>'+
+    notYetHtml+
+    '<div class="card" style="margin-bottom:18px"><div style="font-weight:700;font-size:14px;margin-bottom:10px">🔍 Individual Teacher CPD Record</div><select id="teacher-rec-sel" style="max-width:360px"><option value="">Select teacher to view their full CPD history...</option>'+tOpts+'</select><div id="teacher-rec-out" style="margin-top:14px"></div></div>'+
+    absHtmlAll+eventsHtml;
+}
+
+function openAddCPD(editId){
+  var existing=editId?cpdById(editId):null;
+  var sdpOpts=SDP_GOALS.map(function(g){return'<option value="'+esc(g)+'"'+(existing&&existing.sdpGoal===g?' selected':'')+'>'+esc(g)+'</option>';}).join('');
+  openModal(existing?'Edit CPD Event':'Add CPD Event',
+    '<div class="field"><label class="field-label">CPD Programme Title *</label><input type="text" id="cpd-title" value="'+esc(existing?existing.title:'')+'"></div>'+
+    '<div class="grid2"><div class="field"><label class="field-label">Date *</label><input type="date" id="cpd-date" value="'+(existing?existing.date:todayStr())+'"></div><div class="field"><label class="field-label">Duration (hours)</label><input type="number" id="cpd-dur" value="'+esc(existing?existing.durationHours:'')+'"></div></div>'+
+    '<div class="field"><label class="field-label">Facilitator / Trainer</label><input type="text" id="cpd-fac" value="'+esc(existing?existing.facilitator:'')+'"></div>'+
+    '<div class="field"><label class="field-label">SDP Goal Alignment</label><select id="cpd-sdp"><option value="">Select SDP goal...</option>'+sdpOpts+'</select></div>'+
+    '<div class="field"><label class="field-label">Description / Objectives</label><textarea id="cpd-desc">'+esc(existing?existing.description:'')+'</textarea></div>'+
+    '<div style="display:flex;gap:10px;margin-top:4px"><button class="btn btn-primary" data-action="'+(existing?'update-cpd':'save-cpd')+'" data-id="'+(editId||'')+'">✅ '+(existing?'Update':'Save')+' CPD Event</button><button class="btn btn-ghost" data-action="close-modal">Cancel</button></div>');
+}
+
+async function saveCPD(editId){
+  var title=document.getElementById('cpd-title').value.trim();
+  var date=document.getElementById('cpd-date').value;
+  if(!title||!date){showAlert('Please fill in the title and date.','warn');return;}
+  var data={title:title,date:date,facilitator:document.getElementById('cpd-fac').value.trim(),sdpGoal:document.getElementById('cpd-sdp').value,description:document.getElementById('cpd-desc').value.trim(),durationHours:document.getElementById('cpd-dur').value};
+  closeModal();
+  try {
+    if(editId){
+      var existing=cpdById(editId);
+      Object.assign(existing,data);
+      await spUpdate('cpd',existing);
+      showAlert('CPD event updated!');
+    } else {
+      data.id=uid();
+      await spCreate('cpd',data);
+      DB.cpd.push(data);
+      showAlert('CPD event added!');
+    }
+    render('cpd');
+  } catch(e){showAlert('Error saving: '+e.message,'error');}
+}
+
+async function deleteCPD(id){
+  if(!confirm('Delete this CPD event and all its attendance records?'))return;
+  showLoading('Deleting...');
+  try {
+    var e=cpdById(id);
+    if(e)await spDelete('cpd',e._spId);
+    var attToDelete=attendeesByCPD(id);
+    for(var i=0;i<attToDelete.length;i++)await spDelete('attendance',attToDelete[i]._spId);
+    var absToDelete=(DB.absences||[]).filter(function(a){return a.sessionId===id&&a.sessionType==='cpd';});
+    for(var i=0;i<absToDelete.length;i++)await spDelete('absences',absToDelete[i]._spId);
+    DB.cpd=DB.cpd.filter(function(e){return e.id!==id;});
+    DB.attendance=DB.attendance.filter(function(a){return a.cpdId!==id;});
+    DB.absences=(DB.absences||[]).filter(function(a){return!(a.sessionId===id&&a.sessionType==='cpd');});
+    hideLoading();render('cpd');showAlert('Event deleted.','warn');
+  } catch(e){hideLoading();showAlert('Error deleting: '+e.message,'error');}
+}
+
+function openLogAttendance(cpdId){
+  var evt=cpdById(cpdId);if(!evt)return;
+  var alreadyIds={};attendeesByCPD(cpdId).forEach(function(a){alreadyIds[a.teacherId]=true;});
+  var tOpts=DB.teachers.map(function(t){var d=alreadyIds[t.id];return'<option value="'+t.id+'"'+(d?' disabled style="color:#aaa"':'')+'>'+esc(t.name)+(d?' ✓ logged':'')+'</option>';}).join('');
+  openModal('Log Attendance — '+evt.title,
+    '<div style="background:#f0f4ff;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px"><strong>'+esc(evt.title)+'</strong><br><span style="color:#7a8aaa">'+fmtDate(evt.date)+'</span></div>'+
+    '<div class="field"><label class="field-label">Teacher Name *</label><select id="att-teacher"><option value="">Select your name...</option>'+tOpts+'</select></div>'+
+    '<div class="field"><label class="field-label">🔍 What I Learned (Reflection)</label><textarea id="att-ref" placeholder="Describe key things you learned..."></textarea></div>'+
+    '<div class="field"><label class="field-label">🚀 How I Will Apply It in the Classroom</label><textarea id="att-apply" placeholder="What will you do differently?"></textarea></div>'+
+    '<div class="field"><label class="field-label">📈 Impact on Students</label><textarea id="att-impact" placeholder="Describe changes in student learning..."></textarea></div>'+
+    '<div class="field"><label class="field-label">📷 Upload CPD Photo (optional)</label><input type="file" accept="image/*" id="att-photo"><div id="photo-preview" style="margin-top:8px"></div></div>'+
+    '<div style="display:flex;gap:10px;margin-top:4px"><button class="btn btn-success" data-action="save-att" data-id="'+cpdId+'">✅ Submit Attendance</button><button class="btn btn-ghost" data-action="close-modal">Cancel</button></div>');
+  document.getElementById('att-photo').addEventListener('change',function(){
+    var file=this.files[0];if(!file)return;
+    if(file.size>300*1024)showAlert('Photo is large. Consider a smaller image for best performance.','warn');
+    var reader=new FileReader();var inp=this;
+    reader.onload=function(e){document.getElementById('photo-preview').innerHTML='<img src="'+e.target.result+'" style="max-width:100%;max-height:160px;border-radius:10px">';inp._pd=e.target.result;};
+    reader.readAsDataURL(file);
+  });
+}
+
+async function saveAttendance(cpdId){
+  var tid=document.getElementById('att-teacher').value;
+  if(!tid){showAlert('Please select a teacher.','warn');return;}
+  if(DB.attendance.find(function(a){return a.cpdId===cpdId&&a.teacherId===tid;})){showAlert('This teacher is already logged for this event.','warn');return;}
+  var evt=cpdById(cpdId);
+  var ph=document.getElementById('att-photo');
+  var data={id:uid(),cpdId:cpdId,teacherId:tid,eventTitle:evt?evt.title:'',eventDate:evt?evt.date:'',reflection:document.getElementById('att-ref').value.trim(),howApplied:document.getElementById('att-apply').value.trim(),impact:document.getElementById('att-impact').value.trim(),photo:(ph&&ph._pd)||null};
+  closeModal();
+  try {
+    await spCreate('attendance',data);
+    DB.attendance.push(data);
+    render('cpd');showAlert('Attendance logged successfully!');
+  } catch(e){showAlert('Error saving attendance: '+e.message,'error');}
+}
+
+function openLogCPDAbsent(cpdId){
+  var evt=cpdById(cpdId);if(!evt)return;
+  var tOpts=DB.teachers.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>';}).join('');
+  var swapOpts=DB.teachers.map(function(t){return'<option value="'+esc(t.name)+'">'+esc(t.name)+'</option>';}).join('');
+  openModal('Log Absence — '+evt.title,
+    '<div class="field"><label class="field-label">Teacher *</label><select id="abs-teacher"><option value="">Select teacher...</option>'+tOpts+'</select></div>'+
+    '<div class="field"><label class="field-label">Reason for Absence *</label><textarea id="abs-reason" placeholder="e.g. Medical leave, urgent duty..."></textarea></div>'+
+    '<div class="field"><label class="field-label">Able to swap with another teacher?</label><label style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="abs-swap-chk" style="width:auto"> Yes, swapped with another teacher</label></div>'+
+    '<div id="abs-swap-section" style="display:none"><div class="field"><label class="field-label">Swapped with</label><select id="abs-swap-who"><option value="">Select teacher...</option>'+swapOpts+'</select></div></div>'+
+    '<div style="display:flex;gap:10px;margin-top:4px"><button class="btn btn-warn" data-action="save-cpd-absent" data-id="'+cpdId+'">✅ Save Absence</button><button class="btn btn-ghost" data-action="close-modal">Cancel</button></div>');
+  document.getElementById('abs-swap-chk').addEventListener('change',function(){document.getElementById('abs-swap-section').style.display=this.checked?'block':'none';});
+}
+
+async function saveCPDAbsent(cpdId){
+  var tid=document.getElementById('abs-teacher').value;
+  var reason=document.getElementById('abs-reason').value.trim();
+  if(!tid||!reason){showAlert('Please select teacher and provide reason.','warn');return;}
+  var swapped=document.getElementById('abs-swap-chk').checked;
+  var data={id:uid(),sessionType:'cpd',sessionId:cpdId,teacherId:tid,reason:reason,swapped:swapped,swapWith:swapped?document.getElementById('abs-swap-who').value:'',date:todayStr()};
+  closeModal();
+  try {
+    await spCreate('absences',data);
+    DB.absences=DB.absences||[];DB.absences.push(data);
+    render('cpd');showAlert('Absence recorded.');
+  } catch(e){showAlert('Error saving: '+e.message,'error');}
+}
+
+function showTeacherRecord(tid){
+  var el=document.getElementById('teacher-rec-out');if(!el)return;
+  if(!tid){el.innerHTML='';return;}
+  var records=teacherAttendance(tid);
+  if(records.length===0){el.innerHTML='<p style="font-size:13px;color:#aab3c8">No CPD records found for this teacher.</p>';return;}
+  el.innerHTML=records.map(function(r){return'<div style="padding:12px;background:#f8faff;border-radius:10px;margin-bottom:8px;border:1px solid #e8edf7"><div style="font-weight:700;font-size:13px">'+esc(r.eventTitle||'—')+'</div><div style="font-size:12px;color:#7a8aaa;margin-bottom:6px">'+fmtDate(r.eventDate)+'</div>'+(r.reflection?'<div style="font-size:12px;color:#5a6a8a;margin-bottom:3px">💬 <strong>Learned:</strong> '+esc(r.reflection)+'</div>':'')+(r.howApplied?'<div style="font-size:12px;color:#5a6a8a;margin-bottom:3px">🚀 <strong>Applied:</strong> '+esc(r.howApplied)+'</div>':'')+(r.impact?'<div style="font-size:12px;color:#10b981;margin-bottom:3px">📈 <strong>Impact:</strong> '+esc(r.impact)+'</div>':'')+(r.photo?'<img src="'+r.photo+'" style="width:80px;height:52px;object-fit:cover;border-radius:6px;margin-top:6px" alt="CPD photo">':'')+'</div>';}).join('');
+}
+
+// ─── PLC SESSIONS ─────────────────────────────────────────────────────────────
+function renderPLC(){
+  var schedHtml=PLC_DAYS.map(function(day){
+    var dayT=DB.teachers.filter(function(t){return t.plcDay===day;});
+    var subs=[];dayT.forEach(function(t){var ss=t.subjects||[];ss.forEach(function(s){if(subs.indexOf(s)===-1)subs.push(s);});});
+    return'<div style="background:#f8faff;border-radius:10px;padding:12px;border:1.5px solid #e8edf7;text-align:center"><div style="font-family:Nunito;font-weight:800;font-size:13px;color:#6366f1;margin-bottom:8px">'+day+'</div>'+(subs.length===0?'<div style="font-size:11px;color:#aab3c8">No groups</div>':subs.map(function(s){return'<div style="font-size:11px;font-weight:600;color:#1e2a45;margin-bottom:3px">📚 '+esc(s)+'</div>';}).join(''))+'</div>';
+  }).join('');
+  var usedSubjects=[];
+  DB.plc.forEach(function(s){var k=s.subject+(s.subjectOther?'_'+s.subjectOther:'');if(usedSubjects.indexOf(k)===-1)usedSubjects.push(k);});
+  DB.teachers.forEach(function(t){var ss=t.subjects||[];ss.forEach(function(s){if(usedSubjects.indexOf(s)===-1)usedSubjects.push(s);});});
+  var subjHtml=usedSubjects.map(function(subjKey){
+    var sessions=DB.plc.filter(function(s){var k=s.subject+(s.subjectOther?'_'+s.subjectOther:'');return k===subjKey||s.subject===subjKey;}).sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    var dispSubj=sessions.length>0?(sessions[0].subject==='Other'&&sessions[0].subjectOther?sessions[0].subjectOther:sessions[0].subject):subjKey;
+    var teachers=DB.teachers.filter(function(t){return(t.subjects||[]).indexOf(dispSubj)>-1||(t.subjects||[]).indexOf(subjKey)>-1;});
+    if(sessions.length===0&&teachers.length===0)return'';
+    var sessHtml=sessions.length===0?'<p style="font-size:13px;color:#aab3c8">No sessions recorded yet.</p>':sessions.map(function(s){
+      var absForThis=(DB.absences||[]).filter(function(a){return a.sessionId===s.id&&a.sessionType==='plc';});
+      var attHtml=s.attendees&&s.attendees.length>0?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+s.attendees.map(function(id){var t=teacherById(id);return t?badge(t.name,'#10b981'):'';}).join('')+'</div>':'';
+      var photoHtml=s.photo?'<div style="margin-top:8px"><img src="'+s.photo+'" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover"></div>':'';
+      var pdcaHtml=s.pdcaPhase?'<div style="margin-top:5px">'+badge('PDCA: '+s.pdcaPhase,'#8b5cf6')+(s.pdcaNotes?' <span style="font-size:12px;color:#5a6a8a">'+esc(s.pdcaNotes)+'</span>':'')+'</div>':'';
+      var absHtml=absForThis.length>0?'<div style="font-size:12px;color:#92400e;margin-top:4px">⚠️ Absent: '+absForThis.map(function(ab){var t=teacherById(ab.teacherId);return t?t.name:'?';}).join(', ')+'</div>':'';
+      return'<div style="background:#f8faff;border-radius:10px;padding:14px;margin-bottom:8px;border:1px solid #e8edf7"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px"><strong style="font-size:13px">'+esc(s.topic)+'</strong><div style="display:flex;gap:5px;flex-shrink:0"><span style="font-size:12px;color:#7a8aaa;align-self:center">'+fmtDate(s.date)+' · '+esc(s.day)+'</span><button class="btn btn-ghost btn-sm" data-action="edit-plc" data-id="'+s.id+'" style="padding:3px 10px">✏️</button><button class="btn btn-warn btn-sm" data-action="log-plc-absent" data-id="'+s.id+'" style="padding:3px 10px">❌</button><button class="btn btn-danger btn-sm" data-action="del-plc" data-id="'+s.id+'" style="padding:3px 10px">🗑</button></div></div>'+(s.discussion?'<p style="font-size:12px;color:#5a6a8a;margin-bottom:4px">💬 '+esc(s.discussion)+'</p>':'')+(s.actionPoints?'<p style="font-size:12px;color:#6366f1">📌 '+esc(s.actionPoints)+'</p>':'')+(s.conductedBy?'<p style="font-size:12px;color:#7a8aaa;margin-top:3px">Facilitated by: '+esc(s.conductedBy)+'</p>':'')+pdcaHtml+attHtml+absHtml+photoHtml+'</div>';
+    }).join('');
+    return'<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px"><div><span style="font-family:Nunito;font-weight:800;font-size:16px">📚 '+esc(dispSubj)+'</span><span style="font-size:12px;color:#7a8aaa;margin-left:8px">'+sessions.length+' session(s)</span></div>'+badge(teachers.length+' teacher(s)','#6366f1')+'</div>'+sessHtml+'</div>';
+  }).filter(Boolean).join('');
+  document.getElementById('tab-plc').innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px"><div><div class="section-title">PLC Sessions</div><div class="section-sub">Professional Learning Communities — live data, all changes sync instantly</div></div><button class="btn btn-primary" data-action="add-plc">+ Record PLC Session</button></div>'+
+    '<div class="card" style="margin-bottom:20px"><div class="section-title" style="margin-bottom:12px">Weekly PLC Schedule</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">'+schedHtml+'</div></div>'+
+    (subjHtml||'<div class="card"><p class="empty-state">No PLC sessions yet.</p></div>');
+}
+
+function openAddPLC(editId){
+  var existing=editId?plcById(editId):null;
+  var subjOpts=SUBJECTS.map(function(s){return'<option value="'+esc(s)+'"'+(existing&&existing.subject===s?' selected':'')+'>'+esc(s)+'</option>';}).join('');
+  var dayOpts=PLC_DAYS.map(function(d){return'<option'+(existing&&existing.day===d?' selected':'')+'>'+d+'</option>';}).join('');
+  var pdcaOpts=PDCA_PHASES.map(function(p){return'<option value="'+esc(p)+'"'+(existing&&existing.pdcaPhase===p?' selected':'')+'>'+esc(p)+'</option>';}).join('');
+  var tChecks=DB.teachers.map(function(t){return'<label class="multi-check-item"><input type="checkbox" name="plc-att" value="'+t.id+'"'+(existing&&existing.attendees&&existing.attendees.indexOf(t.id)>-1?' checked':'')+'>'+esc(t.name)+'</label>';}).join('');
+  openModal(existing?'Edit PLC Session':'Record PLC Session',
+    '<div class="grid2"><div class="field"><label class="field-label">Subject Group *</label><select id="plc-subj" onchange="document.getElementById(\'plc-other-wrap\').style.display=this.value===\'Other\'?\'block\':\'none\'">'+subjOpts+'</select></div><div class="field"><label class="field-label">Day</label><select id="plc-day">'+dayOpts+'</select></div></div>'+
+    '<div class="field" id="plc-other-wrap" style="display:'+(existing&&existing.subject==='Other'?'block':'none')+'"><label class="field-label">Specify Subject</label><input type="text" id="plc-other-subj" value="'+esc(existing?existing.subjectOther:'')+'"></div>'+
+    '<div class="grid2"><div class="field"><label class="field-label">Date *</label><input type="date" id="plc-date" value="'+(existing?existing.date:todayStr())+'"></div><div class="field"><label class="field-label">Facilitated By</label><input type="text" id="plc-fac" value="'+esc(existing?existing.conductedBy:'')+'"></div></div>'+
+    '<div class="field"><label class="field-label">Discussion Topic *</label><input type="text" id="plc-topic" value="'+esc(existing?existing.topic:'')+'"></div>'+
+    '<div class="field"><label class="field-label">Key Points Discussed</label><textarea id="plc-disc">'+esc(existing?existing.discussion:'')+'</textarea></div>'+
+    '<div class="field"><label class="field-label">Action Points / Next Steps</label><textarea id="plc-action">'+esc(existing?existing.actionPoints:'')+'</textarea></div>'+
+    '<div class="grid2"><div class="field"><label class="field-label">🔄 PDCA Phase</label><select id="plc-pdca"><option value="">Select...</option>'+pdcaOpts+'</select></div><div class="field"><label class="field-label">PDCA Notes</label><input type="text" id="plc-pdca-notes" value="'+esc(existing?existing.pdcaNotes:'')+'"></div></div>'+
+    '<div class="field"><label class="field-label">Attendees</label><div class="multi-check-wrap">'+tChecks+'</div></div>'+
+    '<div class="field"><label class="field-label">📷 PLC Photo (optional)</label><input type="file" accept="image/*" id="plc-photo"><div id="plc-photo-preview" style="margin-top:8px">'+(existing&&existing.photo?'<img src="'+existing.photo+'" style="max-width:100%;max-height:120px;border-radius:8px">':'')+'</div></div>'+
+    '<div style="display:flex;gap:10px;margin-top:4px"><button class="btn btn-primary" data-action="'+(existing?'update-plc':'save-plc')+'" data-id="'+(editId||'')+'">✅ '+(existing?'Update':'Save')+' PLC Session</button><button class="btn btn-ghost" data-action="close-modal">Cancel</button></div>');
+  document.getElementById('plc-photo').addEventListener('change',function(){
+    var file=this.files[0];if(!file)return;
+    var reader=new FileReader();var inp=this;
+    reader.onload=function(e){document.getElementById('plc-photo-preview').innerHTML='<img src="'+e.target.result+'" style="max-width:100%;max-height:120px;border-radius:8px">';inp._pd=e.target.result;};
+    reader.readAsDataURL(file);
+  });
+}
+
+async function savePLC(editId){
+  var topic=document.getElementById('plc-topic').value.trim();
+  var subj=document.getElementById('plc-subj').value;
+  if(!topic||!subj){showAlert('Please fill in subject and topic.','warn');return;}
+  var subjectOther=subj==='Other'?document.getElementById('plc-other-subj').value.trim():'';
+  if(subj==='Other'&&!subjectOther){showAlert('Please specify the subject.','warn');return;}
+  var attendees=[];
+  document.querySelectorAll('input[name="plc-att"]:checked').forEach(function(c){attendees.push(c.value);});
+  var ph=document.getElementById('plc-photo');
+  var data={subject:subj,subjectOther:subjectOther,day:document.getElementById('plc-day').value,date:document.getElementById('plc-date').value,conductedBy:document.getElementById('plc-fac').value.trim(),topic:topic,discussion:document.getElementById('plc-disc').value.trim(),actionPoints:document.getElementById('plc-action').value.trim(),pdcaPhase:document.getElementById('plc-pdca').value,pdcaNotes:document.getElementById('plc-pdca-notes').value.trim(),attendees:attendees};
+  if(ph&&ph._pd)data.photo=ph._pd;
+  closeModal();
+  try {
+    if(editId){
+      var existing=plcById(editId);
+      if(!data.photo&&existing.photo)data.photo=existing.photo;
+      Object.assign(existing,data);
+      await spUpdate('plc',existing);
+      showAlert('PLC session updated!');
+    } else {
+      data.id=uid();
+      await spCreate('plc',data);
+      DB.plc.push(data);
+      showAlert('PLC session recorded!');
+    }
+    render('plc');
+  } catch(e){showAlert('Error saving: '+e.message,'error');}
+}
+
+async function deletePLC(id){
+  if(!confirm('Delete this PLC session?'))return;
+  try {
+    var s=plcById(id);if(s)await spDelete('plc',s._spId);
+    var absToDelete=(DB.absences||[]).filter(function(a){return a.sessionId===id&&a.sessionType==='plc';});
+    for(var i=0;i<absToDelete.length;i++)await spDelete('absences',absToDelete[i]._spId);
+    DB.plc=DB.plc.filter(function(s){return s.id!==id;});
+    DB.absences=(DB.absences||[]).filter(function(a){return!(a.sessionId===id&&a.sessionType==='plc');});
+    render('plc');showAlert('Session deleted.','warn');
+  } catch(e){showAlert('Error deleting: '+e.message,'error');}
+}
+
+function openLogPLCAbsent(plcId){
+  var session=plcById(plcId);if(!session)return;
+  var tOpts=DB.teachers.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>';}).join('');
+  openModal('Log Absence — PLC Session',
+    '<div style="background:#fff7ed;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px"><strong>'+esc(session.topic)+'</strong><br><span style="color:#7a8aaa">'+fmtDate(session.date)+'</span></div>'+
+    '<div class="field"><label class="field-label">Teacher *</label><select id="plc-abs-teacher"><option value="">Select teacher...</option>'+tOpts+'</select></div>'+
+    '<div class="field"><label class="field-label">Reason for Absence *</label><textarea id="plc-abs-reason"></textarea></div>'+
+    '<div style="display:flex;gap:10px;margin-top:4px"><button class="btn btn-warn" data-action="save-plc-absent" data-id="'+plcId+'">✅ Save</button><button class="btn btn-ghost" data-action="close-modal">Cancel</button></div>');
+}
+
+async function savePLCAbsent(plcId){
+  var tid=document.getElementById('plc-abs-teacher').value;
+  var reason=document.getElementById('plc-abs-reason').value.trim();
+  if(!tid||!reason){showAlert('Please select teacher and provide reason.','warn');return;}
+  var data={id:uid(),sessionType:'plc',sessionId:plcId,teacherId:tid,reason:reason,swapped:false,swapWith:'',date:todayStr()};
+  closeModal();
+  try {
+    await spCreate('absences',data);
+    DB.absences=DB.absences||[];DB.absences.push(data);
+    render('plc');showAlert('Absence recorded.');
+  } catch(e){showAlert('Error saving: '+e.message,'error');}
+}
+
+// ─── STAFF ────────────────────────────────────────────────────────────────────
+function renderStaff(){
+  var roleGroups={};
+  ROLES.forEach(function(r){roleGroups[r]=[];});
+  DB.teachers.forEach(function(t){var primaryRole=t.roles&&t.roles.length>0?t.roles[0]:(t.role||'Guru Subjek');if(!roleGroups[primaryRole])roleGroups[primaryRole]=[];roleGroups[primaryRole].push(t);});
+  var rolesHtml=ROLES.map(function(role){
+    var group=roleGroups[role]||[];if(!group.length)return'';
+    var cards=group.map(function(t){
+      var n=teacherAttendance(t.id).length;
+      var absCount=(DB.absences||[]).filter(function(a){return a.teacherId===t.id;}).length;
+      return'<div class="teacher-card"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="flex:1"><div style="font-weight:700;font-size:14px;margin-bottom:3px">'+esc(t.name)+'</div><div style="font-size:11px;color:#7a8aaa;margin-bottom:5px">📅 PLC: '+esc(t.plcDay||'—')+'</div><div style="margin-bottom:5px;display:flex;flex-wrap:wrap;gap:3px">'+displayRoles(t)+'</div><div style="display:flex;flex-wrap:wrap;gap:3px">'+displaySubjects(t)+'</div></div><div style="display:flex;flex-direction:column;gap:5px;margin-left:8px"><button class="btn btn-ghost btn-sm" data-action="edit-teacher" data-id="'+t.id+'" style="padding:4px 8px">✏️</button><button class="btn btn-danger btn-sm" data-action="del-teacher" data-id="'+t.id+'" style="padding:4px 8px">🗑</button></div></div><div style="margin-top:8px;padding:7px 10px;background:'+(n>0?'#ecfdf5':'#fff7ed')+';border-radius:8px;font-size:12px;font-weight:600;color:'+(n>0?'#065f46':'#92400e')+'">'+(n>0?'✅ '+n+' CPD attended':'⚠️ No CPD recorded')+(absCount>0?' · '+absCount+' absence(s)':'')+'</div></div>';
+    }).join('');
+    var c=roleColor(role);
+    return'<div style="margin-bottom:24px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:10px;height:10px;border-radius:50%;background:'+c+'"></div><h3 style="font-family:Nunito;font-weight:800;font-size:16px">'+role+' ('+group.length+')</h3></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">'+cards+'</div></div>';
+  }).join('');
+  document.getElementById('tab-staff').innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px"><div><div class="section-title">Staff Management</div><div class="section-sub">Changes save live to SharePoint — all users see updates instantly</div></div><button class="btn btn-primary" data-action="add-teacher">+ Add Staff Member</button></div>'+
+    (rolesHtml||'<div class="card"><p class="empty-state">No teachers added yet. Click "+ Add Staff Member" to begin.</p></div>');
+}
+
+function openAddTeacher(editId){
+  var existing=editId?teacherById(editId):null;
+  var existingRoles=existing?(existing.roles||[existing.role||'Guru Subjek']):[];
+  var existingSubs=existing?(existing.subjects||[]):[];
+  var roleChecks=ROLES.map(function(r){return'<label class="multi-check-item"><input type="checkbox" name="st-role" value="'+esc(r)+'"'+(existingRoles.indexOf(r)>-1?' checked':'')+'>'+esc(r)+'</label>';}).join('');
+  var subjChecks=SUBJECTS.map(function(s){return'<label class="multi-check-item"><input type="checkbox" name="st-subj" value="'+esc(s)+'"'+(existingSubs.indexOf(s)>-1?' checked':'')+'>'+esc(s)+'</label>';}).join('');
+  var dayOpts=PLC_DAYS.map(function(d){return'<option'+(existing&&existing.plcDay===d?' selected':'')+'>'+d+'</option>';}).join('');
+  openModal(existing?'Edit Staff Member':'Add Staff Member',
+    '<div class="field"><label class="field-label">Full Name *</label><input type="text" id="st-name" value="'+esc(existing?existing.name:'')+'" placeholder="Teacher full name"></div>'+
+    '<div class="field"><label class="field-label">PLC Day</label><select id="st-day">'+dayOpts+'</select></div>'+
+    '<div class="field"><label class="field-label">Role / Level (select all that apply)</label><div class="multi-check-wrap">'+roleChecks+'</div></div>'+
+    '<div class="field" id="st-other-role-wrap" style="display:'+(existingRoles.indexOf('Others')>-1?'block':'none')+'"><label class="field-label">Specify Role</label><input type="text" id="st-other-role" value="'+esc(existing?existing.roleOther:'')+'" placeholder="Enter role..."></div>'+
+    '<div class="field"><label class="field-label">Subject(s) Taught (select all that apply)</label><div class="multi-check-wrap">'+subjChecks+'</div></div>'+
+    '<div class="field" id="st-other-subj-wrap" style="display:'+(existingSubs.indexOf('Other')>-1?'block':'none')+'"><label class="field-label">Specify Subject</label><input type="text" id="st-other-subj" value="'+esc(existing?existing.subjectOther:'')+'" placeholder="Enter subject..."></div>'+
+    '<div style="display:flex;gap:10px;margin-top:4px"><button class="btn btn-primary" data-action="'+(existing?'update-teacher':'save-teacher')+'" data-id="'+(editId||'')+'">✅ '+(existing?'Update':'Save')+'</button><button class="btn btn-ghost" data-action="close-modal">Cancel</button></div>');
+  document.querySelectorAll('input[name="st-role"]').forEach(function(cb){cb.addEventListener('change',function(){var any=Array.from(document.querySelectorAll('input[name="st-role"]:checked')).some(function(c){return c.value==='Others';});document.getElementById('st-other-role-wrap').style.display=any?'block':'none';});});
+  document.querySelectorAll('input[name="st-subj"]').forEach(function(cb){cb.addEventListener('change',function(){var any=Array.from(document.querySelectorAll('input[name="st-subj"]:checked')).some(function(c){return c.value==='Other';});document.getElementById('st-other-subj-wrap').style.display=any?'block':'none';});});
+}
+
+async function saveTeacher(editId){
+  var name=document.getElementById('st-name').value.trim();
+  if(!name){showAlert('Please enter a name.','warn');return;}
+  var roles=[];document.querySelectorAll('input[name="st-role"]:checked').forEach(function(c){roles.push(c.value);});
+  if(roles.length===0){showAlert('Please select at least one role.','warn');return;}
+  var subjects=[];document.querySelectorAll('input[name="st-subj"]:checked').forEach(function(c){subjects.push(c.value);});
+  var roleOther=roles.indexOf('Others')>-1?document.getElementById('st-other-role').value.trim():'';
+  var subjectOther=subjects.indexOf('Other')>-1?document.getElementById('st-other-subj').value.trim():'';
+  var data={name:name,roles:roles,role:roles[0],subjects:subjects,subjectOther:subjectOther,roleOther:roleOther,plcDay:document.getElementById('st-day').value};
+  closeModal();
+  try {
+    if(editId){
+      var existing=teacherById(editId);
+      Object.assign(existing,data);
+      await spUpdate('teachers',existing);
+      showAlert('Staff member updated!');
+    } else {
+      data.id=uid();
+      await spCreate('teachers',data);
+      DB.teachers.push(data);
+      showAlert('Staff member added!');
+    }
+    render('staff');
+  } catch(e){showAlert('Error saving: '+e.message,'error');}
+}
+
+async function deleteTeacher(id){
+  if(!confirm('Remove this teacher and all their records?'))return;
+  showLoading('Removing...');
+  try {
+    var t=teacherById(id);if(t)await spDelete('teachers',t._spId);
+    var attToDelete=teacherAttendance(id);
+    for(var i=0;i<attToDelete.length;i++)await spDelete('attendance',attToDelete[i]._spId);
+    var absToDelete=(DB.absences||[]).filter(function(a){return a.teacherId===id;});
+    for(var i=0;i<absToDelete.length;i++)await spDelete('absences',absToDelete[i]._spId);
+    DB.teachers=DB.teachers.filter(function(t){return t.id!==id;});
+    DB.attendance=DB.attendance.filter(function(a){return a.teacherId!==id;});
+    DB.absences=(DB.absences||[]).filter(function(a){return a.teacherId!==id;});
+    hideLoading();render('staff');showAlert('Teacher removed.','warn');
+  } catch(e){hideLoading();showAlert('Error: '+e.message,'error');}
+}
+
+// ─── WSE REPORT ───────────────────────────────────────────────────────────────
+function renderReport(){
+  var yr=new Date().getFullYear();
+  var attendedMap={};DB.attendance.forEach(function(a){attendedMap[a.teacherId]=true;});
+  var attended=DB.teachers.filter(function(t){return attendedMap[t.id];}).length;
+  var notYet=DB.teachers.filter(function(t){return!attendedMap[t.id];});
+  var withRef=DB.attendance.filter(function(a){return a.reflection;}).length;
+  var withApply=DB.attendance.filter(function(a){return a.howApplied;}).length;
+  var withImpact=DB.attendance.filter(function(a){return a.impact;}).length;
+  var withPhoto=DB.attendance.filter(function(a){return a.photo;}).length+DB.plc.filter(function(p){return p.photo;}).length;
+  var sdpAligned=DB.cpd.filter(function(e){return e.sdpGoal;}).length;
+  var plcWithPDCA=DB.plc.filter(function(s){return s.pdcaPhase;}).length;
+  var plcSubs=[];DB.plc.forEach(function(s){var k=s.subject+(s.subjectOther?'_'+s.subjectOther:'');if(plcSubs.indexOf(k)===-1)plcSubs.push(k);});
+  var roleGroups={};
+  DB.teachers.forEach(function(t){var roles=t.roles&&t.roles.length>0?t.roles:[t.role||'Guru Subjek'];roles.forEach(function(r){if(!roleGroups[r])roleGroups[r]={total:0,attended:0,color:roleColor(r)};roleGroups[r].total++;if(attendedMap[t.id])roleGroups[r].attended++;});});
+  var checks=[
+    {l:'CPD events documented',d:DB.cpd.length>0},
+    {l:'All staff levels have attended CPD',d:Object.keys(roleGroups).every(function(r){return roleGroups[r].attended>0||roleGroups[r].total===0;})},
+    {l:'Every teacher attended 1+ CPD',d:notYet.length===0&&DB.teachers.length>0},
+    {l:'CPD aligned to SDP goals',d:sdpAligned>0},
+    {l:'Attendance records in place',d:DB.attendance.length>0},
+    {l:'Teacher reflections documented',d:withRef>0},
+    {l:'Application of CPD documented',d:withApply>0},
+    {l:'Student impact documented',d:withImpact>0},
+    {l:'Photo evidence collected',d:withPhoto>0},
+    {l:'PLC sessions recorded',d:DB.plc.length>0},
+    {l:'PDCA cycle in PLC documented',d:plcWithPDCA>0},
+    {l:'Absences and reasons documented',d:DB.absences&&DB.absences.length>0}
+  ];
+  var score=checks.filter(function(c){return c.d;}).length;
+  var total=checks.length;
+  var band=score>=total?4:score>=9?3:score>=6?2:1;
+  var bandColors={4:'#10b981',3:'#3b82f6',2:'#f59e0b',1:'#ef4444'};
+  var bandLabels={4:'BAND 4 — CEMERLANG (OUTSTANDING)',3:'BAND 3 — BAIK (GOOD)',2:'BAND 2 — MEMUASKAN (ADEQUATE)',1:'BAND 1 — LEMAH'};
+  var bc=bandColors[band];
+  var missing=checks.filter(function(c){return!c.d;}).map(function(c){return c.l;}).join(', ');
+  var narLines=['DOMAIN 3.1.4 — STANDARD DAN JANGKAAN','Academic Year '+yr,'','The school has delivered '+DB.cpd.length+' CPD programme(s). '+attended+' of '+DB.teachers.length+' teachers ('+pct(attended,DB.teachers.length)+'%) attended at least one CPD.',''];
+  Object.keys(roleGroups).forEach(function(r){narLines.push('  '+r+': '+roleGroups[r].attended+'/'+roleGroups[r].total+' ('+pct(roleGroups[r].attended,roleGroups[r].total)+'%)');});
+  narLines.push('');
+  if(sdpAligned>0)narLines.push(sdpAligned+' CPD event(s) aligned to SDP goals.');
+  if(withRef>0)narLines.push(withRef+' reflection(s) documented.');
+  if(withApply>0)narLines.push(withApply+' teacher(s) documented classroom application.');
+  if(withImpact>0)narLines.push(withImpact+' teacher(s) recorded student impact.');
+  if(withPhoto>0)narLines.push('Photo evidence: '+withPhoto+' records with photos.');
+  narLines.push('PLC: '+DB.plc.length+' session(s), '+plcSubs.length+' subject group(s), '+plcWithPDCA+' with PDCA.');
+  if(DB.absences&&DB.absences.length>0)narLines.push('Absence records: '+DB.absences.length+' documented with reasons.');
+  narLines.push('');
+  narLines.push(notYet.length>0?'ACTION: '+notYet.map(function(t){return t.name;}).join(', ')+' have not attended any CPD.':'All teachers have attended at least one CPD. ✅');
+  _lastNarrative=narLines.join('\n');
+  var cpdTable=DB.cpd.length===0?'<p class="empty-state">No CPD events recorded.</p>':'<div class="table-wrap"><table><thead><tr><th>Programme</th><th>Date</th><th>Facilitator</th><th>SDP Goal</th><th>Attended</th><th>Reflections</th></tr></thead><tbody>'+DB.cpd.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(e){var att=attendeesByCPD(e.id);var ref=att.filter(function(a){return a.reflection;}).length;return'<tr><td><strong>'+esc(e.title)+'</strong></td><td style="color:#7a8aaa">'+fmtDate(e.date)+'</td><td style="color:#7a8aaa">'+esc(e.facilitator||'—')+'</td><td>'+(e.sdpGoal?badge(e.sdpGoal,'#6366f1'):'—')+'</td><td style="text-align:center">'+badge(att.length,'#10b981')+'</td><td style="text-align:center">'+badge(ref+'/'+att.length,ref===att.length&&att.length>0?'#10b981':'#f59e0b')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  var plcList=DB.plc.length===0?'<p class="empty-state">No PLC sessions recorded.</p>':DB.plc.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).map(function(s){var dispSubj=s.subject==='Other'&&s.subjectOther?s.subjectOther:s.subject;return'<div style="padding:12px 0;border-bottom:1px solid #f0f4ff"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><strong style="font-size:13px">'+esc(dispSubj)+' PLC — '+esc(s.topic)+'</strong><span style="font-size:12px;color:#7a8aaa">'+fmtDate(s.date)+'</span></div>'+(s.pdcaPhase?badge('PDCA: '+s.pdcaPhase,'#8b5cf6'):'')+' '+(s.discussion?'<p style="font-size:12px;color:#5a6a8a;margin-top:3px">'+esc(s.discussion)+'</p>':'')+(s.attendees&&s.attendees.length>0?'<div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px">'+s.attendees.map(function(id){var t=teacherById(id);return t?badge(t.name,'#10b981'):'';}).join('')+'</div>':'')+'</div>';}).join('');
+  document.getElementById('tab-report').innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px"><div><div class="section-title">WSE 3.1.4 Compiled Report</div><div class="section-sub">Auto-generated from live SharePoint data</div></div><button class="btn btn-success no-print" onclick="window.print()">🖨 Print Report</button></div>'+
+    '<div class="card" style="margin-bottom:18px;background:'+bc+'11;border-color:'+bc+';border-width:2px"><div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap"><div style="text-align:center;flex-shrink:0"><div style="font-family:Nunito;font-weight:900;font-size:70px;color:'+bc+';line-height:1">'+band+'</div><div style="font-size:10px;color:'+bc+';font-weight:700;letter-spacing:1px">SUGGESTED BAND</div></div><div style="flex:1;min-width:200px"><div style="font-family:Nunito;font-weight:800;font-size:17px;color:#1e2a45;margin-bottom:6px">'+bandLabels[band]+'</div><div style="font-size:13px;color:#5a6a8a;line-height:1.6;margin-bottom:10px">Based on <strong>'+score+' of '+total+'</strong> criteria evidenced. '+(band<4?'To reach Band 4: <span style="color:#ef4444">'+esc(missing)+'</span>.':'<span style="color:#10b981">All key criteria met ✅</span>')+'</div><div class="progress-bar"><div class="progress-fill" style="width:'+(score/total*100)+'%;background:'+bc+'"></div></div><div style="font-size:12px;color:'+bc+';margin-top:4px;font-weight:700">'+score+'/'+total+' criteria met</div></div></div></div>'+
+    '<div class="grid2" style="margin-bottom:18px"><div class="card"><div class="section-title" style="margin-bottom:12px">Domain 3.1.4 Checklist</div>'+checks.map(function(c){return'<div class="checklist-row"><span style="font-size:16px;flex-shrink:0">'+(c.d?'✅':'❌')+'</span><span style="color:'+(c.d?'#1e2a45':'#aab3c8')+'">'+esc(c.l)+'</span></div>';}).join('')+'</div><div class="card"><div class="section-title" style="margin-bottom:12px">Coverage by Staff Level</div>'+Object.keys(roleGroups).map(function(r){var g=roleGroups[r];return'<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:600">'+esc(r)+'</span><span style="font-size:11px;color:#7a8aaa">'+g.attended+'/'+g.total+'</span></div><div class="progress-bar"><div class="progress-fill" style="width:'+pct(g.attended,g.total)+'%;background:'+g.color+'"></div></div></div>';}).join('')+'</div></div>'+
+    '<div class="card" style="margin-bottom:18px"><div class="section-title" style="margin-bottom:4px">Narrative Evidence Statement</div><div class="section-sub">Copy this for your WSE 3.1.4 submission</div><div style="background:#f8faff;border-radius:10px;padding:16px;font-size:13px;line-height:1.8;white-space:pre-wrap;border:1px solid #e8edf7">'+esc(_lastNarrative)+'</div><button class="btn btn-ghost no-print" style="margin-top:12px" data-action="copy-narrative">📋 Copy Narrative</button></div>'+
+    '<div class="card" style="margin-bottom:18px"><div class="section-title" style="margin-bottom:14px">CPD Programme Record</div>'+cpdTable+'</div>'+
+    '<div class="card"><div class="section-title" style="margin-bottom:14px">PLC Session Record</div>'+plcList+'</div>';
+}
+
+// ─── RESET NEW YEAR ───────────────────────────────────────────────────────────
+async function resetYear(){
+  if(!confirm('Reset for New Academic Year?\n\nThis will DELETE from SharePoint:\n• All CPD events & attendance\n• All PLC sessions\n• All absence records\n\nStaff list will be kept.\n\nThis cannot be undone. Continue?'))return;
+  showLoading('Resetting data...');
+  try {
+    for(var i=0;i<DB.cpd.length;i++)await spDelete('cpd',DB.cpd[i]._spId);
+    for(var i=0;i<DB.attendance.length;i++)await spDelete('attendance',DB.attendance[i]._spId);
+    for(var i=0;i<DB.plc.length;i++)await spDelete('plc',DB.plc[i]._spId);
+    for(var i=0;i<(DB.absences||[]).length;i++)await spDelete('absences',DB.absences[i]._spId);
+    DB.cpd=[];DB.attendance=[];DB.plc=[];DB.absences=[];
+    hideLoading();render(currentTab);showAlert('Reset complete. Staff data kept. ✅');
+  } catch(e){hideLoading();showAlert('Error during reset: '+e.message,'error');}
+}
+
+function copyNarrative(){
+  if(!_lastNarrative){showAlert('No narrative yet.','warn');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(_lastNarrative).then(function(){showAlert('Narrative copied!');}).catch(function(){fbCopy(_lastNarrative);});}else{fbCopy(_lastNarrative);}
+}
+function fbCopy(text){var ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');showAlert('Narrative copied!');}catch(e){showAlert('Please copy manually.','warn');}document.body.removeChild(ta);}
+
+// ─── EVENT DELEGATION ─────────────────────────────────────────────────────────
+document.addEventListener('click',function(e){
+  var el=e.target;
+  while(el&&el!==document.documentElement){
+    var a=el.getAttribute('data-action');
+    if(a){
+      var id=el.getAttribute('data-id');
+      var spid=el.getAttribute('data-spid');
+      if(a==='close-modal')closeModal();
+      else if(a==='add-cpd')openAddCPD();
+      else if(a==='edit-cpd')openAddCPD(id);
+      else if(a==='save-cpd')saveCPD();
+      else if(a==='update-cpd')saveCPD(id);
+      else if(a==='del-cpd')deleteCPD(id);
+      else if(a==='log-att')openLogAttendance(id);
+      else if(a==='save-att')saveAttendance(id);
+      else if(a==='log-cpd-absent')openLogCPDAbsent(id);
+      else if(a==='save-cpd-absent')saveCPDAbsent(id);
+      else if(a==='add-plc')openAddPLC();
+      else if(a==='edit-plc')openAddPLC(id);
+      else if(a==='save-plc')savePLC();
+      else if(a==='update-plc')savePLC(id);
+      else if(a==='del-plc')deletePLC(id);
+      else if(a==='log-plc-absent')openLogPLCAbsent(id);
+      else if(a==='save-plc-absent')savePLCAbsent(id);
+      else if(a==='add-teacher')openAddTeacher();
+      else if(a==='edit-teacher')openAddTeacher(id);
+      else if(a==='save-teacher')saveTeacher();
+      else if(a==='update-teacher')saveTeacher(id);
+      else if(a==='del-teacher')deleteTeacher(id);
+      else if(a==='del-absence'){
+        if(confirm('Remove this absence record?')){
+          var ab=(DB.absences||[]).find(function(x){return x.id===id;});
+          if(ab){spDelete('absences',ab._spId).then(function(){DB.absences=DB.absences.filter(function(x){return x.id!==id;});render(currentTab);showAlert('Absence removed.','warn');}).catch(function(e){showAlert('Error: '+e.message,'error');});}
+        }
+      }
+      else if(a==='copy-narrative')copyNarrative();
+      return;
+    }
+    el=el.parentElement;
+  }
+});
+
+['dashboard','cpd','plc','staff','report'].forEach(function(tab){
+  var btn=document.getElementById('tabBtn-'+tab);
+  if(btn)btn.addEventListener('click',function(){switchTab(tab);});
+});
+
+document.getElementById('btn-signout').addEventListener('click',signOut);
+document.getElementById('btn-refresh').addEventListener('click',loadAllData);
+document.getElementById('btn-reset-year').addEventListener('click',resetYear);
+document.getElementById('modal-close-btn').addEventListener('click',closeModal);
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+document.addEventListener('change',function(e){if(e.target.id==='teacher-rec-sel')showTeacherRecord(e.target.value);});
+
+})();
+</script>
+</body>
+</html>
