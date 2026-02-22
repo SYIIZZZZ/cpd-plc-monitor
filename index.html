@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CPD &amp; PLC Monitor — WSE 3.1.4</title>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<!-- No external auth library needed - using native OAuth2 implicit flow -->
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -102,7 +102,7 @@ td{padding:10px;border-bottom:1px solid #f0f4ff;vertical-align:middle}
     <div class="login-icon">🎓</div>
     <div class="login-title">CPD &amp; PLC Monitor</div>
     <div class="login-sub">WSE Domain 3.1.4 — Standard dan Jangkaan<br>Sign in with your school Microsoft 365 account to continue</div>
-    <button class="btn-ms" id="btn-signin" onclick="this.innerHTML='<span style=\'margin-right:8px\'>⏳</span> Redirecting to Microsoft...';this.disabled=true;signIn();">
+    <button class="btn-ms" id="btn-signin" onclick="signIn()">
       <svg viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
       Sign in with Microsoft
     </button>
@@ -111,20 +111,11 @@ td{padding:10px;border-bottom:1px solid #f0f4ff;vertical-align:middle}
   <div style="color:rgba(255,255,255,.3);font-size:12px">Ministry of Education Brunei · Secure M365 Login</div>
 </div>
 
-<!-- LOADING OVERLAY — shown while checking auth on startup -->
-<div class="loading-overlay" id="loading-overlay" style="display:flex">
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay" style="display:none">
   <div class="spinner"></div>
-  <p id="loading-msg">Checking sign-in status...</p>
-  <button onclick="clearTimeout(window._authTimeout);document.getElementById('loading-overlay').style.display='none';document.getElementById('login-screen').style.display='flex';" style="margin-top:8px;background:none;border:1px solid #dde3f0;border-radius:8px;padding:6px 16px;font-size:12px;color:#7a8aaa;cursor:pointer;display:none" id="skip-btn">Taking too long? Click here</button>
+  <p id="loading-msg">Loading...</p>
 </div>
-<script>
-  // Show the skip button after 5 seconds if still loading
-  setTimeout(function(){
-    var btn = document.getElementById('skip-btn');
-    var overlay = document.getElementById('loading-overlay');
-    if(btn && overlay && overlay.style.display !== 'none') btn.style.display = 'block';
-  }, 5000);
-</script>
 
 <!-- MAIN APP -->
 <div id="main-app" style="display:none">
@@ -183,12 +174,11 @@ td{padding:10px;border-bottom:1px solid #f0f4ff;vertical-align:middle}
 'use strict';
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var CLIENT_ID   = '309beb7a-2fed-4f25-b705-2ba53b9e2775';
-var TENANT_ID   = '055b48fa-571c-4710-8e87-b79ff84ea486';
-var SITE_URL    = 'https://edumoebn.sharepoint.com/sites/CPDPLCMonitor';
-var GRAPH_BASE  = 'https://graph.microsoft.com/v1.0';
-
-// SharePoint List names
+var CLIENT_ID  = '309beb7a-2fed-4f25-b705-2ba53b9e2775';
+var TENANT_ID  = '055b48fa-571c-4710-8e87-b79ff84ea486';
+var SITE_URL   = 'https://edumoebn.sharepoint.com/sites/CPDPLCMonitor';
+var GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+var SCOPES     = 'Sites.ReadWrite.All User.Read';
 var LISTS = {
   teachers:   'CPD_Teachers',
   cpd:        'CPD_Events',
@@ -197,41 +187,85 @@ var LISTS = {
   absences:   'CPD_Absences'
 };
 
-// ─── MSAL SETUP ───────────────────────────────────────────────────────────────
-// Use redirect flow (not popup) so it works when opened from SharePoint/OneDrive
-var _redirectUri = window.location.href.split('?')[0].split('#')[0];
+// ─── LIGHTWEIGHT OAUTH2 — no external library, works everywhere ───────────────
+// Break out of any iframe (SharePoint/OneDrive preview)
+if(window.self !== window.top){ window.top.location.href = window.location.href; }
 
-// Detect if we are inside an iframe (SharePoint preview) — redirect won't work in iframe
-if(window.self !== window.top){
-  // We're in an iframe — break out to full window
-  window.top.location.href = window.location.href;
+var _accessToken = null;
+var currentUser  = null;
+var siteId       = null;
+var listIds      = {};
+
+function getRedirectUri(){
+  return window.location.origin + window.location.pathname;
 }
 
-var msalConfig = {
-  auth: {
-    clientId: CLIENT_ID,
-    authority: 'https://login.microsoftonline.com/' + TENANT_ID,
-    redirectUri: _redirectUri,
-    navigateToLoginRequestUrl: true,
-    postLogoutRedirectUri: _redirectUri
-  },
-  cache: {
-    cacheLocation: 'localStorage',
-    storeAuthStateInCookie: true,
-    secureCookies: false
-  },
-  system: {
-    allowNativeBroker: false,
-    windowHashTimeout: 60000,
-    iframeHashTimeout: 6000,
-    loadFrameTimeout: 0
-  }
-};
-var msalInstance = new msal.PublicClientApplication(msalConfig);
-var SCOPES = ['Sites.ReadWrite.All', 'User.Read', 'offline_access'];
-var currentUser = null;
-var siteId = null;
-var listIds = {};
+function buildAuthUrl(){
+  var p = {
+    client_id:     CLIENT_ID,
+    response_type: 'token',
+    redirect_uri:  getRedirectUri(),
+    scope:         SCOPES,
+    response_mode: 'fragment',
+    nonce:         Math.random().toString(36).slice(2),
+    prompt:        'select_account'
+  };
+  return 'https://login.microsoftonline.com/'+TENANT_ID+'/oauth2/v2.0/authorize?'
+    +Object.keys(p).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(p[k]);}).join('&');
+}
+
+function parseHashToken(){
+  var hash = window.location.hash.substring(1);
+  if(!hash) return null;
+  var params = {};
+  hash.split('&').forEach(function(pair){
+    var kv = pair.split('=');
+    params[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1]||'');
+  });
+  return params.access_token ? params : null;
+}
+
+function saveToken(token, expiresIn){
+  var expiry = Date.now() + ((parseInt(expiresIn)||3600) - 60) * 1000;
+  localStorage.setItem('cpdmon_token', token);
+  localStorage.setItem('cpdmon_expiry', String(expiry));
+}
+
+function loadToken(){
+  var token  = localStorage.getItem('cpdmon_token');
+  var expiry = parseInt(localStorage.getItem('cpdmon_expiry')||'0');
+  if(token && Date.now() < expiry) return token;
+  return null;
+}
+
+function clearToken(){
+  localStorage.removeItem('cpdmon_token');
+  localStorage.removeItem('cpdmon_expiry');
+}
+
+async function getToken(){
+  if(_accessToken) return _accessToken;
+  var stored = loadToken();
+  if(stored){ _accessToken = stored; return _accessToken; }
+  window.location.href = buildAuthUrl();
+  return null;
+}
+
+function signIn(){ window.location.href = buildAuthUrl(); }
+
+function signOut(){
+  clearToken();
+  window.location.href = 'https://login.microsoftonline.com/'+TENANT_ID
+    +'/oauth2/v2.0/logout?post_logout_redirect_uri='+encodeURIComponent(getRedirectUri());
+}
+
+async function getUserInfo(token){
+  try {
+    var r = await fetch(GRAPH_BASE+'/me',{headers:{Authorization:'Bearer '+token}});
+    if(r.ok){ var u=await r.json(); return {name:u.displayName||u.userPrincipalName,username:u.userPrincipalName}; }
+  } catch(e){}
+  return {name:'Teacher',username:''};
+}
 
 // ─── DATA CACHE ───────────────────────────────────────────────────────────────
 var DB = { teachers:[], cpd:[], attendance:[], plc:[], absences:[] };
@@ -359,28 +393,25 @@ async function signOut(){
 
 // ─── GRAPH API ────────────────────────────────────────────────────────────────
 async function graphGet(url){
-  var token=await getToken();
+  var token=await getToken(); if(!token)return null;
   var r=await fetch(GRAPH_BASE+url,{headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'}});
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Request failed: '+r.status);}
   return r.json();
 }
-
 async function graphPost(url,body){
-  var token=await getToken();
+  var token=await getToken(); if(!token)return null;
   var r=await fetch(GRAPH_BASE+url,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Request failed: '+r.status);}
   return r.json();
 }
-
 async function graphPatch(url,body){
-  var token=await getToken();
+  var token=await getToken(); if(!token)return null;
   var r=await fetch(GRAPH_BASE+url,{method:'PATCH',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(!r.ok){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Request failed: '+r.status);}
   return r.status===204?null:r.json();
 }
-
 async function graphDelete(url){
-  var token=await getToken();
+  var token=await getToken(); if(!token)return;
   var r=await fetch(GRAPH_BASE+url,{method:'DELETE',headers:{Authorization:'Bearer '+token}});
   if(!r.ok&&r.status!==404){var err=await r.json().catch(function(){return{};});throw new Error(err.error?err.error.message:'Delete failed: '+r.status);}
 }
@@ -579,104 +610,50 @@ async function spDelete(key,spId){
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-async function initApp(){
+async function initApp(token){
+  _accessToken = token;
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-app').style.display='block';
   showLoading('Connecting to SharePoint...');
-
-  // Set user badge
-  var accounts=msalInstance.getAllAccounts();
-  if(accounts.length>0){
-    currentUser=accounts[0];
-    var ub=document.getElementById('user-badge');
-    if(ub)ub.textContent='👤 '+(currentUser.name||currentUser.username);
-  }
-
+  // Get user info
+  var user = await getUserInfo(token);
+  currentUser = user;
+  var ub = document.getElementById('user-badge');
+  if(ub) ub.textContent = '👤 '+user.name;
   try {
     await resolveSite();
     await resolveListIds();
-    // Ensure all columns exist
     showLoading('Checking SharePoint columns...');
-    for(var k in LISTS){await ensureColumns(k);}
+    for(var k in LISTS){ await ensureColumns(k); }
     await loadAllData();
   } catch(e){
     hideLoading();
-    showAlert('Setup error: '+e.message+' — Check your SharePoint site URL and permissions.','error');
+    showAlert('Setup error: '+e.message,'error');
     setSyncStatus('error');
   }
 }
 
-// ─── STARTUP — handle redirect return from Microsoft login ────────────────────
-function showLoginScreen(errorMsg){
+// ─── STARTUP ─────────────────────────────────────────────────────────────────
+window.addEventListener('load', function(){
+  // Step 1: Check if Microsoft just redirected back with a token in the URL hash
+  var hashParams = parseHashToken();
+  if(hashParams && hashParams.access_token){
+    saveToken(hashParams.access_token, hashParams.expires_in);
+    history.replaceState(null, '', window.location.pathname);
+    initApp(hashParams.access_token);
+    return;
+  }
+
+  // Step 2: Check for a saved valid token
+  var stored = loadToken();
+  if(stored){
+    initApp(stored);
+    return;
+  }
+
+  // Step 3: No token — show login screen immediately, no waiting
   hideLoading();
-  var loginScreen = document.getElementById('login-screen');
-  if(loginScreen) loginScreen.style.display = 'flex';
-  if(errorMsg){
-    var errDiv = document.getElementById('auth-error-msg');
-    if(!errDiv){
-      errDiv = document.createElement('div');
-      errDiv.id = 'auth-error-msg';
-      errDiv.style.cssText = 'color:#fca5a5;font-size:12px;margin-top:14px;text-align:center;max-width:320px;line-height:1.5;padding:10px;background:rgba(255,0,0,.1);border-radius:8px;border:1px solid rgba(255,100,100,.3)';
-      var card = document.querySelector('.login-card');
-      if(card) card.appendChild(errDiv);
-    }
-    errDiv.textContent = errorMsg;
-  }
-}
-
-// Safety timeout — if MSAL hangs for more than 8 seconds, show login screen anyway
-var _authTimeout = setTimeout(function(){
-  var loginScreen = document.getElementById('login-screen');
-  var loadingOverlay = document.getElementById('loading-overlay');
-  // Only kick in if we're still showing the spinner
-  if(loadingOverlay && loadingOverlay.style.display !== 'none'){
-    console.warn('Auth timeout — showing login screen');
-    showLoginScreen('Sign-in check timed out. Please click below to sign in.');
-  }
-}, 8000);
-
-window.addEventListener('load', async function(){
-  try {
-    document.getElementById('loading-msg').textContent = 'Checking sign-in status...';
-
-    // Step 1: Handle redirect return from Microsoft (MUST be first call)
-    var redirectResult = null;
-    try {
-      redirectResult = await msalInstance.handleRedirectPromise();
-    } catch(redirectErr){
-      console.error('handleRedirectPromise failed:', redirectErr);
-      clearTimeout(_authTimeout);
-      showLoginScreen('Login error: ' + redirectErr.message);
-      return;
-    }
-
-    clearTimeout(_authTimeout);
-
-    // Step 2: Coming back from Microsoft login redirect
-    if(redirectResult && redirectResult.account){
-      currentUser = redirectResult.account;
-      document.getElementById('loading-msg').textContent = 'Signed in! Loading data...';
-      await initApp();
-      return;
-    }
-
-    // Step 3: Already signed in from a previous session
-    var accounts = msalInstance.getAllAccounts();
-    if(accounts.length > 0){
-      currentUser = accounts[0];
-      document.getElementById('loading-msg').textContent = 'Welcome back! Loading data...';
-      await initApp();
-      return;
-    }
-
-    // Step 4: Not signed in at all — show login
-    showLoginScreen();
-
-  } catch(e){
-    clearTimeout(_authTimeout);
-    console.error('Startup error:', e);
-    showLoginScreen('Startup error: ' + e.message);
-  }
+  document.getElementById('login-screen').style.display = 'flex';
 });
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
